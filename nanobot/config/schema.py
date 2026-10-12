@@ -113,6 +113,13 @@ class ModelPresetConfig(Base):
         )
 
 
+class SubagentProfileConfig(Base):
+    """Native subagent capacity and permitted child presets."""
+
+    max_concurrent: int = Field(ge=1)
+    allowed_children: list[str] = Field(default_factory=list)
+
+
 class AgentDefaults(Base):
     """Default agent configuration."""
 
@@ -128,6 +135,7 @@ class AgentDefaults(Base):
     fallback_models: list[FallbackCandidate] = Field(default_factory=list)
     max_tool_iterations: int = 200
     max_concurrent_subagents: int = Field(default=4, ge=1)
+    subagent_profiles: dict[str, SubagentProfileConfig] = Field(default_factory=dict)
     max_tool_result_chars: int = 16_000
     provider_retry_mode: Literal["standard", "persistent"] = "standard"
     tool_hint_max_length: int = Field(

@@ -299,6 +299,7 @@ class AgentLoop:
         local_trigger_store: LocalTriggerStore | None = None,
         idle_compact_check_interval_seconds: int = 0,
         recovery_admission: RecoveryAdmission | None = None,
+        subagent_profiles: dict[str, Any] | None = None,
     ):
         from nanobot.config.schema import ToolsConfig
 
@@ -392,6 +393,8 @@ class AgentLoop:
             disabled_skills=disabled_skills,
             max_iterations=self.max_iterations,
             max_concurrent_subagents=max_concurrent_subagents,
+            subagent_profiles=subagent_profiles,
+            runtime_resolver=self.runtime_resolver.resolve_preset,
         )
         self._unified_session = unified_session
         self._running = False
@@ -499,6 +502,7 @@ class AgentLoop:
             model=model,
             max_iterations=defaults.max_tool_iterations,
             max_concurrent_subagents=defaults.max_concurrent_subagents,
+            subagent_profiles=defaults.subagent_profiles,
             context_window_tokens=context_window_tokens,
             max_tool_result_chars=defaults.max_tool_result_chars,
             provider_retry_mode=defaults.provider_retry_mode,

@@ -22,7 +22,11 @@ from nanobot.bus.runtime_events import RuntimeEventPublisher
 from nanobot.channels.notification_routes import notification_metadata
 from nanobot.events import AgentEvent, EventSink
 from nanobot.providers.base import LLMUsage
-from nanobot.session.keys import UNIFIED_SESSION_KEY, last_channel_from_metadata
+from nanobot.session.keys import (
+    UNIFIED_SESSION_KEY,
+    delivery_route_from_session_key,
+    last_channel_from_metadata,
+)
 
 if TYPE_CHECKING:
     from nanobot.utils.llm_runtime import LLMRuntime
@@ -133,6 +137,11 @@ class TurnDeliveryFactory:
             if not isinstance(metadata, dict):
                 return EventSink()
             metadata = cast(dict[str, Any], metadata)
+            # Repair old snapshots in memory; do not rewrite session history.
+            route = delivery_route_from_session_key(f"{channel}:{chat_id}")
+            if route is None:
+                return EventSink()
+            channel, chat_id = route
         else:
             # Older sessions have no route snapshot. Only direct clients have a
             # session key that is also an unambiguous delivery address.
@@ -159,9 +168,7 @@ class TurnDeliveryFactory:
                 publish_lifecycle=True,
             )
 
-        channel, chat_id = (
-            msg.chat_id.split(":", 1) if ":" in msg.chat_id else ("cli", msg.chat_id)
-        )
+        channel, chat_id = delivery_route_from_session_key(msg.chat_id) or ("cli", msg.chat_id)
         metadata: dict[str, Any] = {}
         if (
             channel == "slack"

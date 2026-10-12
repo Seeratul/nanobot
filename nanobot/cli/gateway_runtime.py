@@ -36,7 +36,11 @@ from nanobot.config.paths import is_default_workspace
 from nanobot.config.schema import Config
 from nanobot.gateway.runtime import GatewayInstance
 from nanobot.security.network import is_loopback_host
-from nanobot.session.keys import UNIFIED_SESSION_KEY, last_channel_from_metadata
+from nanobot.session.keys import (
+    UNIFIED_SESSION_KEY,
+    delivery_route_from_session_key,
+    last_channel_from_metadata,
+)
 from nanobot.utils.evaluator import evaluate_response, resolve_evaluator_prompt
 from nanobot.utils.helpers import sync_workspace_templates
 from nanobot.webui.build import BuildMode
@@ -217,9 +221,10 @@ def _pick_heartbeat_target_from_sessions(
                 if channel not in {"cli", "system"} and channel in enabled:
                     return channel, chat_id
             continue
-        if ":" not in key:
+        route = delivery_route_from_session_key(key)
+        if route is None:
             continue
-        channel, chat_id = key.split(":", 1)
+        channel, chat_id = route
         if channel in {"cli", "system"}:
             continue
         if channel in enabled and chat_id:

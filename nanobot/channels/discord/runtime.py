@@ -6,8 +6,9 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import time
+from collections.abc import Callable
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -16,6 +17,7 @@ from pydantic import Field
 from nanobot.bus.events import OutboundMessage
 from nanobot.bus.outbound_events import ContextCompactionEvent, ProgressEvent
 from nanobot.bus.queue import MessageBus
+from nanobot.bus.runtime_events import TurnCompleted
 from nanobot.channels.base import BaseChannel
 from nanobot.command.builtin import build_help_text
 from nanobot.config.paths import get_media_dir
@@ -47,6 +49,7 @@ class _StreamBuf:
     message: discord.Message | None = None
     last_edit: float = 0.0
     stream_id: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class DiscordConfig(Base):
@@ -285,13 +288,16 @@ if DISCORD_AVAILABLE:
             failed_media: list[str] = []
 
             for index, media_path in enumerate(msg.media or []):
-                if await self._send_file(
+                sent = await self._send_file(
                     messageable_channel,
                     media_path,
                     reference=reference if index == 0 else None,
                     mention_settings=mention_settings,
-                ):
+                )
+                if sent is not None:
                     sent_media = True
+                    if msg.event is None:
+                        self._channel._remember_turn_message(msg.chat_id, msg.metadata, sent)
                 else:
                     failed_media.append(Path(media_path).name)
 
@@ -303,6 +309,8 @@ if DISCORD_AVAILABLE:
                     kwargs["reference"] = reference
                     kwargs["allowed_mentions"] = mention_settings
                 sent = await messageable_channel.send(**kwargs)
+                if msg.event is None:
+                    self._channel._remember_turn_message(msg.chat_id, msg.metadata, sent)
                 if compaction is not None and compaction.phase == "started" and index == 0:
                     self._channel._remember_compaction_notice(
                         msg.chat_id,
@@ -328,28 +336,28 @@ if DISCORD_AVAILABLE:
             *,
             reference: discord.PartialMessage | None,
             mention_settings: discord.AllowedMentions,
-        ) -> bool:
-            """Send a file attachment via discord.py."""
+        ) -> discord.Message | None:
+            """Send an attachment and retain its message for transport-owned reactions."""
             path = Path(file_path)
             if not path.is_file():
                 self._channel.logger.warning("file not found, skipping: {}", file_path)
-                return False
+                return None
 
             if path.stat().st_size > MAX_ATTACHMENT_BYTES:
                 self._channel.logger.warning("file too large (>20MB), skipping: {}", path.name)
-                return False
+                return None
 
             try:
                 kwargs: dict[str, Any] = {"file": discord.File(path)}
                 if reference is not None:
                     kwargs["reference"] = reference
                     kwargs["allowed_mentions"] = mention_settings
-                await channel.send(**kwargs)
+                sent = await channel.send(**kwargs)
                 self._channel.logger.info("file sent: {}", path.name)
-                return True
+                return sent
             except Exception:
                 self._channel.logger.exception("Error sending file {}", path.name)
-                return False
+                return None
 
         @staticmethod
         def _build_chunks(content: str, failed_media: list[str], sent_media: bool) -> list[str]:
@@ -427,12 +435,64 @@ class DiscordChannel(BaseChannel):
         self._working_emoji_tasks: dict[str, asyncio.Task[None]] = {}
         self._stream_bufs: dict[str, _StreamBuf] = {}
         self._known_channels: dict[str, Any] = {}
+        self._unsubscribe_turn_completed: Callable[[], None] | None = None
+        self._turn_messages: dict[tuple[str, str, str], discord.Message] = {}
+
+    @staticmethod
+    def _turn_message_key(chat_id: str, metadata: dict[str, Any]) -> tuple[str, str, str]:
+        """Bind the target to this request, not merely the latest message in a chat."""
+        for name in ("message_id", "interaction_id", "origin_message_id"):
+            if value := metadata.get(name):
+                return chat_id, name, str(value)
+        return chat_id, "unscoped", ""
+
+    def _remember_turn_message(
+        self, chat_id: str, metadata: dict[str, Any], message: discord.Message,
+    ) -> None:
+        key = self._turn_message_key(chat_id, metadata)
+        self._turn_messages.pop(key, None)
+        self._turn_messages[key] = message
+        # Proactive sends or cancelled turns may never publish TurnCompleted.
+        if len(self._turn_messages) > 256:
+            self._turn_messages.pop(next(iter(self._turn_messages)))
+
+    async def _on_turn_completed(self, event: TurnCompleted) -> None:
+        """Queue a transport-only reaction after the final answer, with no chat text.
+
+        This ends the foreground turn, not independently delegated worker jobs.
+        Queueing (rather than reacting here) preserves final-answer delivery order.
+        """
+        if not self._running or event.context.channel != self.name:
+            return
+        await self.bus.publish_outbound(
+            OutboundMessage(
+                channel=self.name,
+                chat_id=event.context.chat_id,
+                content="",
+                metadata=dict(event.context.metadata),
+                event=event,
+            )
+        )
+
+    async def _apply_completion_reaction(self, event: TurnCompleted) -> None:
+        key = self._turn_message_key(event.context.chat_id, event.context.metadata)
+        message = self._turn_messages.get(key)
+        if message is None:
+            self.logger.warning("No completion reaction target for chat {}", event.context.chat_id)
+            return
+        # Let the outbound dispatcher's bounded retry policy handle transient errors.
+        await message.add_reaction("✅" if event.outcome == "completed" else "⚠️")
+        self._turn_messages.pop(key, None)
 
     def _remember_channel(self, channel: Any) -> None:
         self._known_channels[self._channel_key(channel)] = channel
 
     def _forget_channel(self, channel_or_id: Any) -> None:
-        self._known_channels.pop(self._channel_key(channel_or_id), None)
+        chat_id = self._channel_key(channel_or_id)
+        self._known_channels.pop(chat_id, None)
+        for key in list(self._turn_messages):
+            if key[0] == chat_id:
+                self._turn_messages.pop(key, None)
 
     async def start(self) -> None:
         """Start the Discord client."""
@@ -480,6 +540,10 @@ class DiscordChannel(BaseChannel):
             return
 
         self._running = True
+        if self._unsubscribe_turn_completed is None:
+            self._unsubscribe_turn_completed = self.bus.subscribe(
+                self._on_turn_completed, TurnCompleted,
+            )
         self.logger.info("Starting client via discord.py...")
 
         try:
@@ -515,7 +579,10 @@ class DiscordChannel(BaseChannel):
         is_progress = isinstance(msg.event, ProgressEvent)
 
         try:
-            await client.send_outbound(msg)
+            if isinstance(msg.event, TurnCompleted):
+                await self._apply_completion_reaction(msg.event)
+            else:
+                await client.send_outbound(msg)
         except Exception:
             self.logger.exception("Error sending message")
             raise
@@ -558,7 +625,7 @@ class DiscordChannel(BaseChannel):
         if buf is None or (
             stream_id is not None and buf.stream_id is not None and buf.stream_id != stream_id
         ):
-            buf = _StreamBuf(stream_id=stream_id)
+            buf = _StreamBuf(stream_id=stream_id, metadata=dict(metadata or {}))
             self._stream_bufs[chat_id] = buf
         elif buf.stream_id is None:
             buf.stream_id = stream_id
@@ -575,7 +642,10 @@ class DiscordChannel(BaseChannel):
         now = time.monotonic()
         if buf.message is None:
             try:
-                buf.message = await target.send(content=buf.text)
+                buf.message = await target.send(
+                    content=DiscordBotClient._build_chunks(buf.text, [], False)[0],
+                )
+                self._remember_turn_message(chat_id, buf.metadata, buf.message)
                 buf.last_edit = now
             except Exception as e:
                 self.logger.warning("stream initial send failed: {}", e)
@@ -699,8 +769,10 @@ class DiscordChannel(BaseChannel):
 
         target = message.channel
 
+        self._remember_turn_message(chat_id, buf.metadata, message)
         for extra_chunk in chunks[1:]:
-            await target.send(content=extra_chunk)
+            sent = await target.send(content=extra_chunk)
+            self._remember_turn_message(chat_id, buf.metadata, sent)
 
         self._stream_bufs.pop(chat_id, None)
         await self._stop_typing(chat_id)
@@ -872,8 +944,12 @@ class DiscordChannel(BaseChannel):
 
     async def _reset_runtime_state(self, close_client: bool) -> None:
         """Reset client and typing state."""
+        if self._unsubscribe_turn_completed is not None:
+            self._unsubscribe_turn_completed()
+            self._unsubscribe_turn_completed = None
         await self._cancel_all_typing()
         self._compaction_notices.clear()
+        self._turn_messages.clear()
         self._stream_bufs.clear()
         self._known_channels.clear()
         if close_client and self._client is not None and not self._client.is_closed():

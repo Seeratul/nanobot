@@ -149,6 +149,20 @@ class ContextBuilder:
                 f"{session_summary['text']}"
             )
 
+        if channel == "discord":
+            parts.append(
+                "# Discord completion indicators\n\n"
+                "Completion indicators are owned exclusively by the gateway. "
+                "It adds a reaction to the last bot reply when the foreground turn ends; "
+                "this does not certify completion of delegated background work. "
+                "Interpret profile preferences for a visible end-of-run checkmark as "
+                "a gateway responsibility, not an answer-writing convention. "
+                "Never append a checkmark or error-status emoji to your reply as an "
+                "end-of-run marker, even if earlier assistant replies did so. "
+                "Ordinary checklists and discussion of emojis remain allowed. "
+                "Discord reactions are transport metadata, not model conversation text."
+            )
+
         return "\n\n---\n\n".join(parts)
 
     def _get_identity(self, channel: str | None = None, workspace: Path | None = None) -> str:
