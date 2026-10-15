@@ -67,6 +67,7 @@ _FORK_VOLATILE_METADATA_KEYS = {
     "thread_goal",
     "title",
     "title_user_edited",
+    "_hindsight_conversation_id",
 }
 _WORKSPACE_STATE_DIR = ".nanobot"
 _WORKSPACE_ID_FILE = "workspace-id"
@@ -285,6 +286,9 @@ class Session:
     last_consolidated: int = 0
     provider_state: ProviderConversationState | None = field(default=None, repr=False)
     policy: SessionPolicy = field(default_factory=SessionPolicy, repr=False, compare=False)
+    _archive_observer: Callable[["Session", int, str], None] | None = field(
+        default=None, repr=False, compare=False,
+    )
 
     def __post_init__(self) -> None:
         if not isinstance(cast(object, self.metadata), dict):
@@ -320,6 +324,12 @@ class Session:
         self.messages.append(msg)
         self.updated_at = datetime.now()
 
+    def set_archive_observer(
+        self, observer: Callable[["Session", int, str], None] | None,
+    ) -> None:
+        """Configure the runtime-only observer without storing it in metadata."""
+        self._archive_observer = observer
+
     def commit_summary_checkpoint(
         self,
         summary: str,
@@ -329,6 +339,10 @@ class Session:
     ) -> None:
         """Replace replay before a hidden boundary while preserving the transcript."""
         boundary = len(self.messages) if insert_at is None else insert_at
+        if not 0 <= boundary <= len(self.messages):
+            raise ValueError("checkpoint boundary is outside the transcript")
+        if self._archive_observer is not None:
+            self._archive_observer(self, boundary, "compact")
         self.messages.insert(boundary, {
             "role": "user",
             "content": SUMMARY_CONTINUATION_TEXT,
@@ -475,7 +489,11 @@ class Session:
         return out
 
     def clear(self) -> None:
-        """Clear all messages and reset session to initial state."""
+        """Clear only after a configured memory exporter has committed the original prefix."""
+        if self._archive_observer is not None:
+            self._archive_observer(self, len(self.messages), "new")
+        if "_hindsight_conversation_id" in self.metadata:
+            self.metadata["_hindsight_conversation_id"] = secrets.token_hex(16)
         self.messages = []
         self.last_archived = 0
         self.provider_state = None
@@ -1212,7 +1230,7 @@ class JsonlSessionStore:
         with self._session_files_lock:
             self._save_unlocked(session, fsync=fsync)
 
-    def save_runtime_checkpoint(self, session: Session) -> None:
+    def save_runtime_checkpoint(self, session: Session, *, fsync: bool = False) -> None:
         """Atomically persist only the volatile in-flight turn state.
 
         A checkpoint is written several times during a tool-heavy turn. Keeping it
@@ -1224,7 +1242,7 @@ class JsonlSessionStore:
             if not path.exists():
                 # A user turn normally creates the session first. Internal callers
                 # may checkpoint a fresh session, so establish the durable base once.
-                self._save_unlocked(session)
+                self._save_unlocked(session, fsync=fsync)
                 return
 
             checkpoint = session.metadata.get(_RUNTIME_CHECKPOINT_KEY)
@@ -1255,7 +1273,12 @@ class JsonlSessionStore:
                         ensure_ascii=False,
                         separators=(",", ":"),
                     )
+                    if fsync:
+                        handle.flush()
+                        os.fsync(handle.fileno())
                 os.replace(tmp, target)
+                if fsync:
+                    self._fsync_directory(target.parent)
             finally:
                 tmp.unlink(missing_ok=True)
 
@@ -1661,9 +1684,19 @@ class SessionManager:
         self._overflow_cache: WeakValueDictionary[str, Session] = WeakValueDictionary()
         self._max_cached_sessions = SESSION_CACHE_MAX_SIZE
         self._delete_observer: Callable[[str], None] | None = None
+        self._archive_observer: Callable[[Session, int, str], None] | None = None
+
+    def set_archive_observer(
+        self, observer: Callable[[Session, int, str], None] | None,
+    ) -> None:
+        """Bind a synchronous, durable export before checkpoint/reset mutation."""
+        self._archive_observer = observer
+        for session in [*self._cache.values(), *self._overflow_cache.values()]:
+            session.set_archive_observer(observer)
 
     def _remember(self, session: Session) -> None:
         """Keep recent sessions strongly cached without duplicating live objects."""
+        session.set_archive_observer(self._archive_observer)
         self._overflow_cache.pop(session.key, None)
         self._cache[session.key] = session
         self._cache.move_to_end(session.key)
@@ -1788,7 +1821,7 @@ class SessionManager:
         if not session.policy.persist:
             return
 
-        self._store.save(session, fsync=fsync)
+        self._store.save(session, fsync=fsync or self._archive_observer is not None)
         self._remember(session)
 
     def save_runtime_checkpoint(self, session: Session) -> None:
@@ -1796,7 +1829,9 @@ class SessionManager:
         if not session.policy.persist:
             return
         if self._store is self._jsonl_store:
-            self._jsonl_store.save_runtime_checkpoint(session)
+            self._jsonl_store.save_runtime_checkpoint(
+                session, fsync=self._archive_observer is not None,
+            )
             self._remember(session)
             return
         # Third-party stores keep their existing all-or-nothing semantics until

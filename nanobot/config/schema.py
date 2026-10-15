@@ -120,6 +120,14 @@ class SubagentProfileConfig(Base):
     allowed_children: list[str] = Field(default_factory=list)
 
 
+class HindsightConfig(Base):
+    """Opt-in durable export; provider credentials belong to the separate service."""
+
+    enabled: bool = False
+    bank_id: str = Field(default="personal", pattern=r"^[A-Za-z0-9_-]+$")
+    api_url: str = "http://127.0.0.1:8888"
+
+
 class AgentDefaults(Base):
     """Default agent configuration."""
 
@@ -163,6 +171,7 @@ class AgentDefaults(Base):
         ge=0,
     )  # Minimum interval in seconds between scans for idle sessions
     dream: DreamConfig = Field(default_factory=DreamConfig)
+    hindsight: HindsightConfig = Field(default_factory=HindsightConfig)
 
     @model_validator(mode="before")
     @classmethod

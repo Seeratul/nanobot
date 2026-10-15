@@ -57,9 +57,11 @@ from nanobot.bus.outbound_events import (
 from nanobot.bus.queue import MessageBus
 from nanobot.command import CommandContext, CommandRouter, register_builtin_commands
 from nanobot.command.router import normalize_command_text
-from nanobot.config.schema import AgentDefaults, ModelPresetConfig
+from nanobot.config.schema import AgentDefaults, HindsightConfig, ModelPresetConfig
 from nanobot.events import NO_EVENTS, AgentEvent, EventSink
 from nanobot.llm_usage.context import source_from_request
+from nanobot.memory_sync.adapter import SessionMemoryExporter
+from nanobot.memory_sync.outbox import MemoryOutbox
 from nanobot.providers.base import LLMProvider, LLMUsage, ProviderConversationState
 from nanobot.providers.factory import ProviderSnapshot
 from nanobot.runtime_context import (
@@ -300,6 +302,7 @@ class AgentLoop:
         idle_compact_check_interval_seconds: int = 0,
         recovery_admission: RecoveryAdmission | None = None,
         subagent_profiles: dict[str, Any] | None = None,
+        hindsight_config: HindsightConfig | None = None,
     ):
         from nanobot.config.schema import ToolsConfig
 
@@ -374,6 +377,20 @@ class AgentLoop:
 
         self.context = ContextBuilder(workspace, timezone=timezone, disabled_skills=disabled_skills)
         self.sessions = session_manager or SessionManager(workspace)
+        self.memory_outbox: MemoryOutbox | None = None
+        self.memory_exporter: SessionMemoryExporter | None = None
+        if hindsight_config is not None and hindsight_config.enabled:
+            self.memory_outbox = MemoryOutbox(
+                self.sessions.sessions_dir / "hindsight-outbox.sqlite3",
+                bank_id=hindsight_config.bank_id,
+            )
+            self.memory_exporter = SessionMemoryExporter(
+                self.memory_outbox, known_secrets=tuple(
+                    value for name, value in os.environ.items()
+                    if name.upper().endswith(("_KEY", "_TOKEN", "_SECRET", "_PASSWORD"))
+                ),
+            )
+            self.sessions.set_archive_observer(self.memory_exporter.capture)
         # One file-read/write tracker per logical session. The tool registry is
         # shared by this loop, so tools resolve the active state via contextvars.
         self._file_state_store = FileStateStore(max_sessions=SESSION_CACHE_MAX_SIZE)
@@ -503,6 +520,7 @@ class AgentLoop:
             max_iterations=defaults.max_tool_iterations,
             max_concurrent_subagents=defaults.max_concurrent_subagents,
             subagent_profiles=defaults.subagent_profiles,
+            hindsight_config=defaults.hindsight,
             context_window_tokens=context_window_tokens,
             max_tool_result_chars=defaults.max_tool_result_chars,
             provider_retry_mode=defaults.provider_retry_mode,
