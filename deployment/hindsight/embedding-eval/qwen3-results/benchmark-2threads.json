@@ -1,0 +1,349 @@
+{
+  "model": "Qwen/Qwen3-Embedding-0.6B-GGUF",
+  "quantization": "Q8_0",
+  "dimensions": 1024,
+  "threads": 2,
+  "startup_seconds": 14.077272332971916,
+  "synthetic_documents": 18,
+  "synthetic_queries": 14,
+  "top1_hits": 14,
+  "top3_hits": 14,
+  "query_median_seconds": 3.1407050549751148,
+  "query_max_seconds": 3.5011527400347404,
+  "document_median_seconds": 2.3076742500124965,
+  "long_chunk_seconds": 28.937561658967752,
+  "long_chunk_usage": {
+    "prompt_tokens": 310,
+    "total_tokens": 310
+  },
+  "server_peak_rss_mib": 916.37890625,
+  "system_available_before_mib": 2590.25390625,
+  "system_available_min_mib": 2242.99609375,
+  "swap_used_delta_mib": 0.0,
+  "temperature_max_c": 72.062,
+  "results": [
+    {
+      "query": "What language should I use when answering Mira?",
+      "expected": "language",
+      "top3": [
+        {
+          "id": "language",
+          "score": 0.737
+        },
+        {
+          "id": "keyboard",
+          "score": 0.5855
+        },
+        {
+          "id": "vegan",
+          "score": 0.4524
+        }
+      ],
+      "seconds": 2.696,
+      "usage": {
+        "prompt_tokens": 31,
+        "total_tokens": 31
+      }
+    },
+    {
+      "query": "Which database and programming language did we choose for the Atlas backend?",
+      "expected": "atlas-backend",
+      "top3": [
+        {
+          "id": "atlas-backend",
+          "score": 0.7787
+        },
+        {
+          "id": "atlas-frontend",
+          "score": 0.5902
+        },
+        {
+          "id": "storage",
+          "score": 0.3985
+        }
+      ],
+      "seconds": 2.971,
+      "usage": {
+        "prompt_tokens": 34,
+        "total_tokens": 34
+      }
+    },
+    {
+      "query": "Mit welchem Framework wurde die öffentliche Atlas-Webseite gebaut?",
+      "expected": "atlas-frontend",
+      "top3": [
+        {
+          "id": "atlas-frontend",
+          "score": 0.6394
+        },
+        {
+          "id": "atlas-backend",
+          "score": 0.6109
+        },
+        {
+          "id": "backup-other",
+          "score": 0.4559
+        }
+      ],
+      "seconds": 3.234,
+      "usage": {
+        "prompt_tokens": 37,
+        "total_tokens": 37
+      }
+    },
+    {
+      "query": "Was hat die zeitweisen Verbindungsprobleme wirklich behoben?",
+      "expected": "repair-dns",
+      "top3": [
+        {
+          "id": "repair-dns",
+          "score": 0.6046
+        },
+        {
+          "id": "repair-disk",
+          "score": 0.5071
+        },
+        {
+          "id": "monitor",
+          "score": 0.4705
+        }
+      ],
+      "seconds": 3.315,
+      "usage": {
+        "prompt_tokens": 38,
+        "total_tokens": 38
+      }
+    },
+    {
+      "query": "Why did the service fail to start, and how was that fixed?",
+      "expected": "repair-disk",
+      "top3": [
+        {
+          "id": "repair-disk",
+          "score": 0.7052
+        },
+        {
+          "id": "repair-dns",
+          "score": 0.6059
+        },
+        {
+          "id": "monitor",
+          "score": 0.5135
+        }
+      ],
+      "seconds": 3.052,
+      "usage": {
+        "prompt_tokens": 35,
+        "total_tokens": 35
+      }
+    },
+    {
+      "query": "Welche Ernährungswünsche muss ein Restaurant für Mira erfüllen?",
+      "expected": "vegan",
+      "top3": [
+        {
+          "id": "vegan",
+          "score": 0.7031
+        },
+        {
+          "id": "restaurant-other",
+          "score": 0.5253
+        },
+        {
+          "id": "language",
+          "score": 0.5022
+        }
+      ],
+      "seconds": 3.501,
+      "usage": {
+        "prompt_tokens": 40,
+        "total_tokens": 40
+      }
+    },
+    {
+      "query": "Where are the encrypted nightly backups kept?",
+      "expected": "backup",
+      "top3": [
+        {
+          "id": "backup",
+          "score": 0.7033
+        },
+        {
+          "id": "storage",
+          "score": 0.4395
+        },
+        {
+          "id": "backup-other",
+          "score": 0.379
+        }
+      ],
+      "seconds": 2.525,
+      "usage": {
+        "prompt_tokens": 29,
+        "total_tokens": 29
+      }
+    },
+    {
+      "query": "Which device hosts the demo app, and how can I access its local service?",
+      "expected": "deployment",
+      "top3": [
+        {
+          "id": "deployment",
+          "score": 0.6545
+        },
+        {
+          "id": "backup-other",
+          "score": 0.4944
+        },
+        {
+          "id": "budget",
+          "score": 0.4509
+        }
+      ],
+      "seconds": 3.237,
+      "usage": {
+        "prompt_tokens": 37,
+        "total_tokens": 37
+      }
+    },
+    {
+      "query": "Welches Verkehrsmittel hat Mira für die Wienreise gewählt?",
+      "expected": "travel",
+      "top3": [
+        {
+          "id": "travel",
+          "score": 0.7938
+        },
+        {
+          "id": "travel-other",
+          "score": 0.5658
+        },
+        {
+          "id": "keyboard",
+          "score": 0.4873
+        }
+      ],
+      "seconds": 3.327,
+      "usage": {
+        "prompt_tokens": 38,
+        "total_tokens": 38
+      }
+    },
+    {
+      "query": "When should the assistant send notifications?",
+      "expected": "notifications",
+      "top3": [
+        {
+          "id": "notifications",
+          "score": 0.5875
+        },
+        {
+          "id": "backup",
+          "score": 0.31
+        },
+        {
+          "id": "garden",
+          "score": 0.2784
+        }
+      ],
+      "seconds": 2.438,
+      "usage": {
+        "prompt_tokens": 28,
+        "total_tokens": 28
+      }
+    },
+    {
+      "query": "Wo speichern wir hochgeladene Dateien und deren Metadaten?",
+      "expected": "storage",
+      "top3": [
+        {
+          "id": "storage",
+          "score": 0.59
+        },
+        {
+          "id": "backup",
+          "score": 0.4068
+        },
+        {
+          "id": "backup-other",
+          "score": 0.3314
+        }
+      ],
+      "seconds": 3.237,
+      "usage": {
+        "prompt_tokens": 37,
+        "total_tokens": 37
+      }
+    },
+    {
+      "query": "What keyboard layout does Mira use?",
+      "expected": "keyboard",
+      "top3": [
+        {
+          "id": "keyboard",
+          "score": 0.7797
+        },
+        {
+          "id": "language",
+          "score": 0.5241
+        },
+        {
+          "id": "travel",
+          "score": 0.4576
+        }
+      ],
+      "seconds": 2.531,
+      "usage": {
+        "prompt_tokens": 29,
+        "total_tokens": 29
+      }
+    },
+    {
+      "query": "Wodurch wurde das Flackern des Bildschirms behoben?",
+      "expected": "monitor",
+      "top3": [
+        {
+          "id": "monitor",
+          "score": 0.6979
+        },
+        {
+          "id": "repair-disk",
+          "score": 0.4953
+        },
+        {
+          "id": "repair-dns",
+          "score": 0.4405
+        }
+      ],
+      "seconds": 3.23,
+      "usage": {
+        "prompt_tokens": 37,
+        "total_tokens": 37
+      }
+    },
+    {
+      "query": "What monthly hosting budget was agreed for the demo shop?",
+      "expected": "budget",
+      "top3": [
+        {
+          "id": "budget",
+          "score": 0.7897
+        },
+        {
+          "id": "backup-other",
+          "score": 0.4064
+        },
+        {
+          "id": "deployment",
+          "score": 0.3879
+        }
+      ],
+      "seconds": 2.796,
+      "usage": {
+        "prompt_tokens": 32,
+        "total_tokens": 32
+      }
+    }
+  ],
+  "limitations": "Small synthetic smoke test; no real conversations, production load, or concurrent Hindsight/PostgreSQL."
+}

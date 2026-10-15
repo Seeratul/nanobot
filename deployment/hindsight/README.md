@@ -37,8 +37,9 @@ profile outages and preservation of local profile edits.
 
 ## Required before production activation
 
-1. Discuss and choose the local embedding model with Felix before downloading
-   weights or running an embedding benchmark. This is explicitly pending.
+1. Qwen3-Embedding-0.6B Q8_0 was selected and tested on the Pi. See
+   [embedding evaluation](embedding-eval/qwen3-results/README.md). Validate
+   full-stack resource usage and behavior before production activation.
 2. Set up pinned Hindsight v1.0.0 and PostgreSQL/pgvector with loopback access.
    Test actual API behavior; HTTP mocks are not a deployment test.
 3. Create a dedicated Codex login for Hindsight. No dedicated auth.json exists
@@ -61,8 +62,11 @@ profile outages and preservation of local profile edits.
    compaction and the SOUL.md/USER.md bootstrap files.
 
 Felix selected GPT-6 Luna through Codex, local embeddings and no backups for now.
-No backup jobs, embedding model downloads, Hindsight containers, profile changes
-or live-service restarts have been performed during this development stage.
+Qwen3 was downloaded and tested using synthetic data. No backup jobs, Hindsight
+containers, production profile changes or live-service restarts were performed.
+The example uses OpenAI-compatible HTTP against a local server, without a paid
+embedding API. If Hindsight runs in a container, host loopback requires an
+explicitly chosen network setup; the example is not a deployed configuration.
 
 API contract inspected: Hindsight release v1.0.0, published 2026-10-13,
 `hindsight-docs/static/openapi.json`. Runtime HTTP behavior still needs testing.

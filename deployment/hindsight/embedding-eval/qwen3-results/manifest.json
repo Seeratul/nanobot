@@ -1,0 +1,13 @@
+{
+  "model": "Qwen/Qwen3-Embedding-0.6B-GGUF",
+  "model_revision": "370f27d7550e0def9b39c1f16d3fbaa13aa67728",
+  "model_file": "Qwen3-Embedding-0.6B-Q8_0.gguf",
+  "model_sha256": "06507c7b42688469c4e7298b0a1e16deff06caf291cf0a5b278c308249c3e439",
+  "llama_cpp_tag": "v0.7.0",
+  "architecture": "aarch64",
+  "cpu": "Cortex-A72",
+  "pooling": "last",
+  "embedding_dimensions": 1024,
+  "source_archive_sha256": "55d67acf3ad2ad747a9bbeb75f9f0e173dbcc0d1753a471038a90c819421c5e1",
+  "cmake_version": "cmake version 4.4.4"
+}
