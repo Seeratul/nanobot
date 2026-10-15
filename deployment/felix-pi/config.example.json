@@ -1,0 +1,49 @@
+{
+  "modelPresets": {
+    "sol-high": {
+      "provider": "openai_codex",
+      "maxTokens": 32000,
+      "temperature": 0.1,
+      "model": "openai-codex/gpt-6.1-sol",
+      "contextWindowTokens": 500000,
+      "reasoningEffort": "high"
+    },
+    "luna": {
+      "provider": "openai_codex",
+      "maxTokens": 32000,
+      "temperature": 0.1,
+      "model": "openai-codex/gpt-6-luna",
+      "contextWindowTokens": 272000,
+      "reasoningEffort": "high"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "modelPreset": "sol-high",
+      "fallbackModels": [],
+      "maxToolIterations": 60,
+      "maxConcurrentSubagents": 22,
+      "subagentProfiles": {
+        "sol-high": {
+          "maxConcurrent": 2,
+          "allowedChildren": [
+            "luna"
+          ]
+        },
+        "luna": {
+          "maxConcurrent": 20,
+          "allowedChildren": []
+        }
+      },
+      "idleCompactAfterMinutes": 45,
+      "dream": {
+        "enabled": true,
+        "intervalH": 2,
+        "modelOverride": null,
+        "maxBatchSize": 20,
+        "maxIterations": 15,
+        "annotateLineAges": true
+      }
+    }
+  }
+}
