@@ -68,6 +68,7 @@ _FORK_VOLATILE_METADATA_KEYS = {
     "title",
     "title_user_edited",
     "_hindsight_conversation_id",
+    "_hindsight_context_generation",
 }
 _WORKSPACE_STATE_DIR = ".nanobot"
 _WORKSPACE_ID_FILE = "workspace-id"
@@ -494,6 +495,7 @@ class Session:
             self._archive_observer(self, len(self.messages), "new")
         if "_hindsight_conversation_id" in self.metadata:
             self.metadata["_hindsight_conversation_id"] = secrets.token_hex(16)
+        self.metadata.pop("_hindsight_export_start", None)
         self.messages = []
         self.last_archived = 0
         self.provider_state = None
@@ -1957,6 +1959,14 @@ class SessionManager:
         if source.last_archived > len(copied):
             metadata.pop("_last_summary", None)
             last_consolidated = 0
+
+        export_start = metadata.get("_hindsight_export_start", 0)
+        if isinstance(export_start, int) and not isinstance(export_start, bool) and export_start > 0:
+            export_start = min(export_start, len(copied))
+            metadata["_hindsight_export_start"] = export_start
+            last_consolidated = max(last_consolidated, export_start)
+            if len(copied) <= export_start:
+                metadata.pop("_last_summary", None)
 
         now = datetime.now()
         target = Session(

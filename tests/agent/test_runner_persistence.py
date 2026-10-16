@@ -82,6 +82,7 @@ async def test_runner_persists_large_tool_results_for_follow_up_calls(tmp_path):
     assert "x" * 20_000 in readback
 
     loop = AgentLoop.__new__(AgentLoop)
+    loop.memory_exporter = None
     loop.max_tool_result_chars = 2048
     session = Session(key="test:runner")
     loop._save_turn(session, result.messages, skip=1)
@@ -273,6 +274,7 @@ async def test_processed_tool_result_is_stable_for_persistence_and_replay(tmp_pa
     )
 
     loop = AgentLoop.__new__(AgentLoop)
+    loop.memory_exporter = None
     loop.max_tool_result_chars = 2048
     session = Session(key="test:replay")
     loop._save_turn(session, result.messages, skip=1)
@@ -379,6 +381,7 @@ async def test_mixed_tool_text_survives_model_save_replay(tmp_path):
     assert len(reference) <= 2048
     assert live[-1]["content"][1] == image
     loop = AgentLoop.__new__(AgentLoop)
+    loop.memory_exporter = None
     session = Session(key="mixed")
     loop._save_turn(session, live, skip=0)
     replay = governor.prepare_messages_for_model(config, session.get_history())

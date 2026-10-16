@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from nanobot.session.manager import Session
 
 CONVERSATION_ID_KEY = "_hindsight_conversation_id"
+EXPORT_START_KEY = "_hindsight_export_start"
+CONTEXT_GENERATION_KEY = "_hindsight_context_generation"
 _SECRET = re.compile(
     r"-----BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY-----.*?-----END (?:RSA |OPENSSH |EC )?PRIVATE KEY-----"
     r"|\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{20,})\b"
@@ -53,12 +55,40 @@ class SessionMemoryExporter:
             and isinstance(block.get("text"), str)
         )
 
+    def needs_context_reset(self, session: Session) -> bool:
+        return session.metadata.get(CONTEXT_GENERATION_KEY, 0) != self.outbox.context_generation(session.key)
+
+    def reset_context_if_needed(self, session: Session) -> bool:
+        """Keep original rows, but fence old replay/provider state and exports."""
+        generation = self.outbox.context_generation(session.key)
+        if session.metadata.get(CONTEXT_GENERATION_KEY, 0) == generation:
+            return False
+        boundary = len(session.messages)
+        session.metadata[EXPORT_START_KEY] = boundary
+        session.metadata[CONTEXT_GENERATION_KEY] = generation
+        session.metadata[CONVERSATION_ID_KEY] = str(uuid5(
+            NAMESPACE_URL, f"{session.key}:forget:{generation}:{boundary}",
+        ))
+        session.last_archived = boundary
+        session.provider_state = None
+        session.metadata.pop("_last_summary", None)
+        return True
+
     def capture(self, session: Session, boundary: int, reason: str) -> None:
         """Commit before the session mutates; no external calls on this path."""
         if not session.policy.persist or session.key.startswith(("dream:", "subagent:")):
             return
         if not 0 <= boundary <= len(session.messages):
             raise ValueError("invalid memory export boundary")
+        if self.needs_context_reset(session):
+            # A running turn can finish after a forget was queued. Never export
+            # its old context; the turn boundary will perform the durable reset.
+            if reason == "compact":
+                raise ValueError("memory context reset required before compaction")
+            return
+        start_value = cast(object, session.metadata.get(EXPORT_START_KEY, 0))
+        if isinstance(start_value, bool) or not isinstance(start_value, int) or not 0 <= start_value <= boundary:
+            raise ValueError("invalid memory export start boundary")
         conversation_id = session.metadata.get(CONVERSATION_ID_KEY)
         if not isinstance(conversation_id, str) or not conversation_id:
             # Deterministic even if a process dies after queue commit but before
@@ -67,7 +97,7 @@ class SessionMemoryExporter:
                 NAMESPACE_URL, session.key + ":" + session.created_at.isoformat(),
             ))
             session.metadata[CONVERSATION_ID_KEY] = conversation_id
-        originals = [m for m in session.messages[:boundary]
+        originals = [m for m in session.messages[start_value:boundary]
                      if m.get("role") in {"user", "assistant", "tool"}
                      and not m.get("_command") and not is_hidden_history_message(m)]
         # A provider may compact just after a tool call. Leave that call and its
@@ -90,7 +120,7 @@ class SessionMemoryExporter:
                     function = cast(dict[str, Any], raw_function)
                     name = function.get("name", "")
                     call_id = call.get("id")
-                    if (isinstance(name, str) and name.startswith("mcp_hindsight_")
+                    if (isinstance(name, str) and (name.startswith("mcp_hindsight_") or name == "memory")
                             and isinstance(call_id, str)):
                         memory_call_ids.add(call_id)
         fingerprints: list[str] = []

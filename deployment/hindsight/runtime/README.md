@@ -90,8 +90,8 @@ real acceptance test with the protection enabled. No rejected change was applied
 ## Remaining activation work
 
 Selective forgetting is chosen and implemented at the queue/worker boundary.
-Finish the fact-only tool contract, explicit remember, real profile bootstrap, memory-sync unit activation, MCP
-client configuration, Dream/runtime MEMORY.md removal and controlled Nanobot
+Finish real profile bootstrap, memory-sync unit activation, MCP
+client configuration, Dream runtime removal and controlled Nanobot
 switch. Test long mixed/code inputs against the embedding context limit before
 history import. The current standalone runtime is ready; the Nanobot memory
 migration is not complete.
@@ -132,10 +132,59 @@ refresh_after_consolidation at the request root is silently ignored in this API.
 An initial last_refreshed_at alone does not prove content generation completed;
 acceptance waits for nonempty saved content before checking the profile.
 
-The original source identity is quarantined against replay. This currently also
-suspends further automatic exports for that still-open source until /new rotates
-its identity. The user-facing workflow must create a safe new export/context
-boundary before activation. The caller must identify all intended fact IDs if a
+The original source identity is quarantined against replay. The memory tool now
+creates a new active-context/export generation automatically (see below).
+The caller must identify all intended fact IDs if a
 piece of information has duplicate/paraphrased entries; one UUID is not a semantic
 ban on all future restatements or manually rewritten/forked source identities.
 The production Nanobot is still unchanged; no real profiles or chats were imported.
+
+
+## Explicit memory tools and context reset, 2026-10-16
+
+With Hindsight enabled, the main agent registers one exclusive `memory` tool:
+`remember` queues original persisted conversation evidence; `forget` accepts
+explicit fact UUIDs; `status` reports delivery, forget receipts and worker pause /
+resume state. It is not discovered by subagents. Mutation requires a persisted
+user request context. Queued is never reported as completed.
+
+Forget resolves every fact through the configured bank before queuing anything.
+Only world/experience facts with a locally known source document are accepted;
+derived observations and foreign source IDs fail without creating receipts.
+Tool HTTP traffic uses the shared URL guard and pinned DNS transport, requires
+an explicit loopback SSRF whitelist, and never follows redirects or environment
+proxies. Remote error bodies and source text are not returned in errors.
+
+A durable SQLite generation invalidates active context in both the source and
+requesting sessions. Old rows remain in the archive; provider continuation state,
+saved summaries and the AutoCompact RAM summary are discarded. A turn already in
+flight is fenced when saved, and a restarted process checks the same generation
+before assembling another model request. Stale asynchronous compaction cannot
+commit its old summary. New exports start at the new boundary and use a new
+conversation identity; the quarantined prefix cannot be automatically reimported.
+Forks created after reset preserve the export fence.
+
+During pending forgetting, profile reads use pending placeholders; legacy
+MEMORY.md is excluded from Hindsight-enabled prompts altogether. Normal SOUL.md
+and USER.md injection resumes after the worker has invalidated and recreated the
+saved profiles. Existing facts outside the selected IDs remain available through
+recall. The archive and Hindsight invalidation audit are retained; this is not
+forensic deletion or a semantic ban on future user restatements or preexisting
+independent copies. Dream must still be disabled before production activation.
+
+Validation: 575 tests and 10 subtests passed across memory, recovery, context,
+configuration and agent persistence. Ruff passed. Strict checking of all eight
+changed production modules reported zero errors and warnings. The final legacy
+MEMORY.md prompt exclusion is additionally covered by the enabled-mode regression.
+
+
+The real acceptance test exercised `memory.remember` and `memory.forget` through
+the guarded loopback transport against the native Luna/Qwen stack under
+NoNewPrivileges=true. One town fact was retired; the instrument fact and original
+shared document remained, saved profiles retained the instrument without the
+town, active context was reset, and subsequent original evidence queued under a
+new identity without the old fact. The fictional bank was removed; all dedicated
+services and the unchanged production Nanobot remained active. See
+memory-tool-report.json and real_memory_tool_test.py. After the final prompt
+change, 84 focused context/agent tests and Ruff passed; both changed modules were
+rechecked with strict typing.

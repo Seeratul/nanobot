@@ -377,6 +377,7 @@ class AgentLoop:
 
         self.context = ContextBuilder(workspace, timezone=timezone, disabled_skills=disabled_skills)
         self.sessions = session_manager or SessionManager(workspace)
+        self.hindsight_config = hindsight_config
         self.memory_outbox: MemoryOutbox | None = None
         self.memory_exporter: SessionMemoryExporter | None = None
         if hindsight_config is not None and hindsight_config.enabled:
@@ -392,6 +393,9 @@ class AgentLoop:
                 ),
             )
             self.sessions.set_archive_observer(self.memory_exporter.capture)
+            self.context.legacy_memory_enabled = False
+            outbox = self.memory_outbox
+            self.context.profile_reads_allowed = lambda: not outbox.forget_pending()
         # One file-read/write tracker per logical session. The tool registry is
         # shared by this loop, so tools resolve the active state via contextvars.
         self._file_state_store = FileStateStore(max_sessions=SESSION_CACHE_MAX_SIZE)
@@ -660,6 +664,16 @@ class AgentLoop:
         )
         loader = ToolLoader()
         registered = loader.load(ctx, self.tools)
+        if self.memory_exporter is not None and self.hindsight_config is not None:
+            from nanobot.memory_sync.tools import MemoryTool
+            from nanobot.memory_sync.worker import HindsightWorker
+
+            worker = HindsightWorker(
+                self.memory_exporter.outbox, api_url=self.hindsight_config.api_url,
+                bank_id=self.hindsight_config.bank_id,
+            )
+            self.tools.register(MemoryTool(self.sessions, self.memory_exporter, worker))
+            registered.append("memory")
 
         logger.info("Registered {} tools: {}", len(registered), registered)
 
@@ -1899,6 +1913,10 @@ class AgentLoop:
             )
         if ctx.on_runtime_admitted is not None:
             await ctx.on_runtime_admitted(runtime)
+        if not ctx.ephemeral and self.memory_exporter is not None:
+            if self.memory_exporter.reset_context_if_needed(session):
+                self.auto_compact.discard_summary(session.key)
+                self.sessions.save(session, fsync=True)
         if not ctx.ephemeral:
             ctx.session, ctx.pending_summary = self.auto_compact.prepare_session(
                 session,
@@ -2171,6 +2189,8 @@ class AgentLoop:
         input_persisted_early: bool = False,
     ) -> None:
         """Commit new-turn messages and an optional summary boundary."""
+        if self.memory_exporter is not None and self.memory_exporter.needs_context_reset(session):
+            summary_checkpoint = None
         declared_tool_call_ids = {
             str(tc["id"])
             for m in session.messages
@@ -2292,6 +2312,9 @@ class AgentLoop:
             session.messages[last_assistant_idx]["latency_ms"] = int(turn_latency_ms)
         if saved_followup_ids:
             acknowledge_pending_followups(session, saved_followup_ids)
+        if self.memory_exporter is not None:
+            if self.memory_exporter.reset_context_if_needed(session):
+                self.auto_compact.discard_summary(session.key)
         session.updated_at = datetime.now()
 
     def _persist_subagent_followup(self, session: Session, msg: InboundMessage) -> bool:

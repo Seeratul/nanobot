@@ -1237,6 +1237,7 @@ class Consolidator:
             self.sessions.invalidate(session_key)
             session = self.sessions.get_or_create(session_key)
 
+            context_generation = session.metadata.get("_hindsight_context_generation", 0)
             archive_start = session.last_archived
             messages_to_archive = list(session.messages[archive_start:])
             has_new_messages = any(
@@ -1256,6 +1257,8 @@ class Consolidator:
                 summary = await self.archive_session(
                     session, archive_end=archive_end, runtime=runtime,
                 )
+                if session.metadata.get("_hindsight_context_generation", 0) != context_generation:
+                    summary = None
                 if summary:
                     # Concurrent appends remain after the captured boundary.
                     session.commit_summary_checkpoint(

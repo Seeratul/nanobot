@@ -66,6 +66,9 @@ class MemoryOutbox:
                     conversation_id TEXT PRIMARY KEY,
                     state TEXT NOT NULL DEFAULT 'pending', revision INTEGER NOT NULL DEFAULT 0
                 );
+                CREATE TABLE IF NOT EXISTS context_generations (
+                    session_key TEXT PRIMARY KEY, generation INTEGER NOT NULL DEFAULT 0
+                );
                 CREATE TABLE IF NOT EXISTS forget_targets (
                     conversation_id TEXT NOT NULL, memory_id TEXT NOT NULL,
                     PRIMARY KEY(conversation_id, memory_id)
@@ -171,7 +174,10 @@ class MemoryOutbox:
             )
             return document_id if content else None
 
-    def request_forget(self, document_id: str, *, memory_ids: list[str] | None = None) -> str:
+    def request_forget(
+        self, document_id: str, *, memory_ids: list[str] | None = None,
+        active_session_key: str | None = None,
+    ) -> str:
         """Quarantine the source before targeted retirement or explicit source deletion.
 
         The pause file is written first so a crash cannot restart the remote
@@ -182,7 +188,7 @@ class MemoryOutbox:
                 raise ValueError("explicit fact identities are required")
             memory_ids = [str(UUID(value)) for value in memory_ids]
         with self._connect() as db:
-            row = db.execute("SELECT conversation_id FROM jobs WHERE document_id=?",
+            row = db.execute("SELECT conversation_id, session_key FROM jobs WHERE document_id=?",
                              (document_id,)).fetchone()
             if row is None:
                 raise ValueError("unknown source document; no deletion requested")
@@ -204,14 +210,44 @@ class MemoryOutbox:
             db.execute("INSERT INTO forget_requests(conversation_id) VALUES (?) "
                        "ON CONFLICT(conversation_id) DO UPDATE SET state='pending', revision=revision+1",
                        (conversation_id,))
+            keys = {str(row["session_key"])}
+            if active_session_key:
+                keys.add(active_session_key)
+            for key in keys:
+                db.execute("INSERT INTO context_generations(session_key,generation) VALUES (?,1) "
+                           "ON CONFLICT(session_key) DO UPDATE SET generation=generation+1", (key,))
             for memory_id in memory_ids or []:
                 db.execute("INSERT OR IGNORE INTO forget_targets(conversation_id,memory_id) "
                            "VALUES (?,?)", (conversation_id, memory_id))
             return conversation_id
 
-    def request_fact_forget(self, document_id: str, memory_ids: list[str]) -> str:
+    def request_fact_forget(
+        self, document_id: str, memory_ids: list[str], *, active_session_key: str | None = None,
+    ) -> str:
         """Retire selected facts while retaining the source's other live facts."""
-        return self.request_forget(document_id, memory_ids=memory_ids)
+        return self.request_forget(document_id, memory_ids=memory_ids, active_session_key=active_session_key)
+
+    def context_generation(self, session_key: str) -> int:
+        with self._connect() as db:
+            row = db.execute("SELECT generation FROM context_generations WHERE session_key=?",
+                             (session_key,)).fetchone()
+            return int(row["generation"]) if row is not None else 0
+
+    def known_document(self, document_id: str) -> bool:
+        with self._connect() as db:
+            return db.execute("SELECT 1 FROM jobs WHERE document_id=?", (document_id,)).fetchone() is not None
+
+    def latest_document(self, conversation_id: str) -> str | None:
+        with self._connect() as db:
+            row = db.execute("SELECT document_id FROM jobs WHERE conversation_id=? "
+                             "ORDER BY last_seq DESC LIMIT 1", (conversation_id,)).fetchone()
+            return str(row["document_id"]) if row is not None else None
+
+    def forget_status(self) -> dict[str, int]:
+        with self._connect() as db:
+            return {str(row["state"]): int(row["count"]) for row in db.execute(
+                "SELECT state,COUNT(*) AS count FROM forget_requests GROUP BY state"
+            )}
 
     def fact_targets(self, conversation_id: str) -> list[str]:
         with self._connect() as db:

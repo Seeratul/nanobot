@@ -113,6 +113,10 @@ class AutoCompact:
         finally:
             self._archiving.discard(key)
 
+    def discard_summary(self, key: str) -> None:
+        """Discard a cached summary after an explicit active-context reset."""
+        self._summaries.pop(key, None)
+
     def prepare_session(self, session: Session, key: str) -> tuple[Session, SessionSummary | None]:
         if self._is_internal_session(key):
             self._archiving.discard(key)

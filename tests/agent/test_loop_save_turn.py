@@ -93,6 +93,7 @@ def _assembled_messages(
 
 def _mk_loop() -> AgentLoop:
     loop = AgentLoop.__new__(AgentLoop)
+    loop.memory_exporter = None
     from nanobot.config.schema import AgentDefaults
 
     loop.max_tool_result_chars = AgentDefaults().max_tool_result_chars
@@ -2617,3 +2618,77 @@ def test_checkpoint_acknowledges_restored_followup_and_preserves_context_marker(
     assert "_meta" not in user
     assert RUNTIME_CONTEXT_HISTORY_META in user
     assert public_history_message(user)["content"] == "followup"
+
+
+@pytest.mark.asyncio
+async def test_hindsight_forget_fences_inflight_output_and_next_model_context(tmp_path):
+    from uuid import uuid4
+
+    from nanobot.memory_sync.adapter import SessionMemoryExporter
+    from nanobot.memory_sync.outbox import MemoryOutbox
+
+    loop = _make_full_loop(tmp_path)
+    outbox = MemoryOutbox(tmp_path / "outbox.sqlite3")
+    exporter = SessionMemoryExporter(outbox)
+    loop.memory_exporter = exporter
+    loop.sessions.set_archive_observer(exporter.capture)
+    session = loop.sessions.get_or_create("cli:forget")
+    session.add_message("user", "I live in Westlake.")
+    exporter.capture(session, len(session.messages), "remember")
+    source = outbox.next_job().document_id
+    loop.sessions.save(session)
+    calls = []
+
+    async def run(transcript_input, **_kwargs):
+        messages = _assembled_messages(loop.context, transcript_input)
+        calls.append(messages)
+        if len(calls) == 1:
+            loop.auto_compact._summaries[session.key] = {"text": "Westlake cache", "last_active": session.updated_at.isoformat()}
+            outbox.request_fact_forget(source, [str(uuid4())])
+            return _agent_run_result("queued", [*messages, {"role": "assistant", "content": "Old Westlake output"}])
+        assert "Westlake" not in json.dumps(messages)
+        return _agent_run_result("fresh", [*messages, {"role": "assistant", "content": "fresh"}])
+
+    loop._run_agent_loop = run
+    await loop._process_message(InboundMessage(channel="cli", sender_id="user", chat_id="forget", content="Forget my town"))
+    assert session.get_history() == []
+    assert session.key not in loop.auto_compact._summaries
+    assert any("Westlake" in str(row.get("content")) for row in session.messages)
+    loop.sessions.invalidate(session.key)
+    await loop._process_message(InboundMessage(channel="cli", sender_id="user", chat_id="forget", content="Hello again"))
+    assert len(calls) == 2
+
+
+def test_hindsight_memory_tool_registered_only_when_enabled(tmp_path):
+    from nanobot.config.schema import HindsightConfig
+
+    plain = _make_full_loop(tmp_path / "plain")
+    assert plain.tools.get("memory") is None
+    provider = MagicMock()
+    provider.get_default_model.return_value = "test-model"
+    provider.generation = SimpleNamespace(max_tokens=4096)
+    enabled = AgentLoop(bus=MessageBus(), provider=provider, workspace=tmp_path / "enabled",
+                        model="test-model", hindsight_config=HindsightConfig(enabled=True))
+    assert enabled.tools.get("memory") is not None
+    (enabled.workspace / "memory").mkdir(exist_ok=True)
+    (enabled.workspace / "memory" / "MEMORY.md").write_text("Old legacy town")
+    (enabled.workspace / "USER.md").write_text("A retained profile preference")
+    assert "Old legacy town" not in enabled.context.build_system_prompt()
+    assert "retained profile preference" in enabled.context.build_system_prompt()
+
+
+@pytest.mark.asyncio
+async def test_hindsight_idle_compaction_discards_summary_after_context_reset(tmp_path):
+    loop = _make_full_loop(tmp_path)
+    session = loop.sessions.get_or_create("cli:idle-forget")
+    session.add_message("user", "Old town evidence")
+    loop.sessions.save(session)
+
+    async def archive(session, **kwargs):
+        session.metadata["_hindsight_context_generation"] = 1
+        return "Old town summary"
+
+    loop.consolidator.archive_session = archive
+    result = await loop.consolidator.compact_idle_session(session.key, runtime=loop.llm_runtime)
+    assert result is None
+    assert "_last_summary" not in loop.sessions.get_or_create(session.key).metadata

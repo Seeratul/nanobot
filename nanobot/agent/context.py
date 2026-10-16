@@ -3,6 +3,7 @@
 import base64
 import mimetypes
 import platform
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence, cast
@@ -95,6 +96,8 @@ class ContextBuilder:
     def __init__(self, workspace: Path, timezone: str | None = None, disabled_skills: list[str] | None = None):
         self.workspace = workspace
         self.timezone = timezone
+        self.legacy_memory_enabled = True
+        self.profile_reads_allowed: Callable[[], bool] | None = None
         self.memory = MemoryStore(workspace)
         self.skills = SkillsLoader(workspace, disabled_skills=set(disabled_skills) if disabled_skills else None)
 
@@ -124,7 +127,9 @@ class ContextBuilder:
                 "Use it as the default root for project files and relative tool paths."
             )
 
-        if include_memory:
+        if include_memory and self.legacy_memory_enabled and (
+            self.profile_reads_allowed is None or self.profile_reads_allowed()
+        ):
             memory = self.memory.read_memory()
             if memory and not self._is_template_content(memory, "memory/MEMORY.md"):
                 parts.append(f"# Memory\n\n## Long-term Memory\n{memory}")
@@ -215,7 +220,11 @@ class ContextBuilder:
             ("USER.md", self.workspace),
         ]
 
+        profiles_allowed = self.profile_reads_allowed is None or self.profile_reads_allowed()
         for filename, root in sources:
+            if filename in {"SOUL.md", "USER.md"} and not profiles_allowed:
+                parts.append(f"## {filename}\n\nProfile refresh pending.")
+                continue
             file_path = root / filename
             if file_path.exists():
                 content = file_path.read_text(encoding="utf-8")
