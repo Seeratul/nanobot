@@ -1,0 +1,176 @@
+{
+  "mode": "LLM none: chunks and recall only; no Luna extraction/consolidation",
+  "hindsight_version": "1.0.0",
+  "postgresql_version": "17.11",
+  "pgvector_version": "0.8.0",
+  "qwen_threads": 2,
+  "synthetic_documents": 18,
+  "top1_hits": 10,
+  "queries": 14,
+  "query_median_seconds": 3.2027353564917576,
+  "query_max_seconds": 3.565652882971335,
+  "ingestion_median_seconds": 3.5166578915086575,
+  "api_restart_persistence_passed": true,
+  "system_available_before_mib": 2587.3515625,
+  "system_available_min_mib": 1968.56640625,
+  "additional_swap_mib": 11.26171875,
+  "qwen_peak_rss_mib": 900.0390625,
+  "hindsight_peak_rss_mib": 354.08203125,
+  "temperature_max_c": 67.192,
+  "results": [
+    {
+      "query": "What language should I use when answering Mira?",
+      "expected": "language",
+      "top1_hit": false,
+      "seconds": 2.9948893940309063,
+      "returned_texts": [
+        "Mira verwendet eine deutsche QWERTZ-Tastatur. Tastenkombinationen müssen zum deutschen Layout passen.",
+        "For a separate work trip, Jonas booked a flight to Zurich. Mira is not joining that trip.",
+        "For the autumn trip, Mira chose a train to Vienna. She ruled out flying because she wants to avoid airport transfers."
+      ]
+    },
+    {
+      "query": "Which database and programming language did we choose for the Atlas backend?",
+      "expected": "atlas-backend",
+      "top1_hit": true,
+      "seconds": 3.050863001961261,
+      "returned_texts": [
+        "Im Projekt Atlas läuft das Backend mit Python 3.12 und PostgreSQL. Redis wurde wegen zusätzlicher Komplexität verworfen.",
+        "The Atlas website uses TypeScript and Astro for its public frontend. This decision concerns the website, not the backend database.",
+        "The public demo website is rebuilt from Git on demand. Its build cache is disposable and does not contain the database backup."
+      ]
+    },
+    {
+      "query": "Mit welchem Framework wurde die öffentliche Atlas-Webseite gebaut?",
+      "expected": "atlas-frontend",
+      "top1_hit": false,
+      "seconds": 3.2858586669899523,
+      "returned_texts": [
+        "Im Projekt Atlas läuft das Backend mit Python 3.12 und PostgreSQL. Redis wurde wegen zusätzlicher Komplexität verworfen.",
+        "The Atlas website uses TypeScript and Astro for its public frontend. This decision concerns the website, not the backend database.",
+        "Die Demo-App läuft auf einem Raspberry Pi 4 mit einer USB-SSD. Der Dienst lauscht ausschließlich auf Loopback und wird über einen SSH-Tunnel erreicht."
+      ]
+    },
+    {
+      "query": "Was hat die zeitweisen Verbindungsprobleme wirklich behoben?",
+      "expected": "repair-dns",
+      "top1_hit": true,
+      "seconds": 3.3991165210027248,
+      "returned_texts": [
+        "The intermittent connection failures were fixed by correcting the DNS server address. Restarting the application alone did not solve them.",
+        "Die Tomaten auf dem Balkon werden morgens gegossen. Diese Notiz gehört zum Gartenprojekt und betrifft keine Serverwartung.",
+        "Der Startfehler wurde durch eine volle SSD verursacht. Nach dem Entfernen alter Build-Artefakte startete der Dienst wieder. DNS war bei diesem Vorfall korrekt."
+      ]
+    },
+    {
+      "query": "Why did the service fail to start, and how was that fixed?",
+      "expected": "repair-disk",
+      "top1_hit": false,
+      "seconds": 3.1262027799966745,
+      "returned_texts": [
+        "The intermittent connection failures were fixed by correcting the DNS server address. Restarting the application alone did not solve them.",
+        "Der Startfehler wurde durch eine volle SSD verursacht. Nach dem Entfernen alter Build-Artefakte startete der Dienst wieder. DNS war bei diesem Vorfall korrekt.",
+        "The display flicker disappeared after replacing the HDMI cable. Changing the keyboard layout had no effect on that fault."
+      ]
+    },
+    {
+      "query": "Welche Ernährungswünsche muss ein Restaurant für Mira erfüllen?",
+      "expected": "vegan",
+      "top1_hit": true,
+      "seconds": 3.565652882971335,
+      "returned_texts": [
+        "Mira eats vegan food and avoids dairy and eggs. When choosing a restaurant, plant-based main courses are required.",
+        "Mira verwendet eine deutsche QWERTZ-Tastatur. Tastenkombinationen müssen zum deutschen Layout passen.",
+        "Jonas enjoys grilled fish and seafood. His preferences do not describe Mira's diet."
+      ]
+    },
+    {
+      "query": "Where are the encrypted nightly backups kept?",
+      "expected": "backup",
+      "top1_hit": true,
+      "seconds": 2.7947653509909287,
+      "returned_texts": [
+        "Für das Demo-Projekt wird jede Nacht ein verschlüsseltes Backup auf das NAS geschrieben. Ein Wiederherstellungstest ist monatlich geplant.",
+        "The public demo website is rebuilt from Git on demand. Its build cache is disposable and does not contain the database backup.",
+        "The proposed object store was rejected. Uploaded files stay on the local SSD, while their metadata is stored in PostgreSQL."
+      ]
+    },
+    {
+      "query": "Which device hosts the demo app, and how can I access its local service?",
+      "expected": "deployment",
+      "top1_hit": true,
+      "seconds": 3.2918258479912765,
+      "returned_texts": [
+        "Die Demo-App läuft auf einem Raspberry Pi 4 mit einer USB-SSD. Der Dienst lauscht ausschließlich auf Loopback und wird über einen SSH-Tunnel erreicht.",
+        "Für den Demo-Shop wurde ein Hostingbudget von 20 Euro im Monat vereinbart. Das Limit gilt nicht für Miras privaten Urlaub.",
+        "The public demo website is rebuilt from Git on demand. Its build cache is disposable and does not contain the database backup."
+      ]
+    },
+    {
+      "query": "Welches Verkehrsmittel hat Mira für die Wienreise gewählt?",
+      "expected": "travel",
+      "top1_hit": true,
+      "seconds": 3.3749724729568698,
+      "returned_texts": [
+        "For the autumn trip, Mira chose a train to Vienna. She ruled out flying because she wants to avoid airport transfers.",
+        "For a separate work trip, Jonas booked a flight to Zurich. Mira is not joining that trip.",
+        "Die Demo-Nutzerin Mira möchte Antworten auf Deutsch. Fachbegriffe dürfen Englisch bleiben. Sie bevorzugt kurze, direkte Erklärungen."
+      ]
+    },
+    {
+      "query": "When should the assistant send notifications?",
+      "expected": "notifications",
+      "top1_hit": true,
+      "seconds": 2.4847589090350084,
+      "returned_texts": [
+        "Benachrichtigungen sollen nur bei erledigten Aufgaben, Fehlern oder nötigen Entscheidungen erscheinen. Wiederholte Meldungen ohne neue Information sind unerwünscht.",
+        "Für das Demo-Projekt wird jede Nacht ein verschlüsseltes Backup auf das NAS geschrieben. Ein Wiederherstellungstest ist monatlich geplant.",
+        "Die Tomaten auf dem Balkon werden morgens gegossen. Diese Notiz gehört zum Gartenprojekt und betrifft keine Serverwartung."
+      ]
+    },
+    {
+      "query": "Wo speichern wir hochgeladene Dateien und deren Metadaten?",
+      "expected": "storage",
+      "top1_hit": true,
+      "seconds": 3.2792679329868406,
+      "returned_texts": [
+        "The proposed object store was rejected. Uploaded files stay on the local SSD, while their metadata is stored in PostgreSQL.",
+        "Die Tomaten auf dem Balkon werden morgens gegossen. Diese Notiz gehört zum Gartenprojekt und betrifft keine Serverwartung.",
+        "Für das Demo-Projekt wird jede Nacht ein verschlüsseltes Backup auf das NAS geschrieben. Ein Wiederherstellungstest ist monatlich geplant."
+      ]
+    },
+    {
+      "query": "What keyboard layout does Mira use?",
+      "expected": "keyboard",
+      "top1_hit": true,
+      "seconds": 2.573855108988937,
+      "returned_texts": [
+        "Mira verwendet eine deutsche QWERTZ-Tastatur. Tastenkombinationen müssen zum deutschen Layout passen.",
+        "The display flicker disappeared after replacing the HDMI cable. Changing the keyboard layout had no effect on that fault.",
+        "For the autumn trip, Mira chose a train to Vienna. She ruled out flying because she wants to avoid airport transfers."
+      ]
+    },
+    {
+      "query": "Wodurch wurde das Flackern des Bildschirms behoben?",
+      "expected": "monitor",
+      "top1_hit": false,
+      "seconds": 3.2979628929751925,
+      "returned_texts": [
+        "Der Startfehler wurde durch eine volle SSD verursacht. Nach dem Entfernen alter Build-Artefakte startete der Dienst wieder. DNS war bei diesem Vorfall korrekt.",
+        "Für das Demo-Projekt wird jede Nacht ein verschlüsseltes Backup auf das NAS geschrieben. Ein Wiederherstellungstest ist monatlich geplant.",
+        "The display flicker disappeared after replacing the HDMI cable. Changing the keyboard layout had no effect on that fault."
+      ]
+    },
+    {
+      "query": "What monthly hosting budget was agreed for the demo shop?",
+      "expected": "budget",
+      "top1_hit": true,
+      "seconds": 2.962620224978309,
+      "returned_texts": [
+        "Für den Demo-Shop wurde ein Hostingbudget von 20 Euro im Monat vereinbart. Das Limit gilt nicht für Miras privaten Urlaub.",
+        "The public demo website is rebuilt from Git on demand. Its build cache is disposable and does not contain the database backup.",
+        "Die Demo-App läuft auf einem Raspberry Pi 4 mit einer USB-SSD. Der Dienst lauscht ausschließlich auf Loopback und wird über einen SSH-Tunnel erreicht."
+      ]
+    }
+  ]
+}

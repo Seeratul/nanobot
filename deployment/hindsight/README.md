@@ -40,10 +40,13 @@ profile outages and preservation of local profile edits.
 1. Qwen3-Embedding-0.6B Q8_0 was selected and tested on the Pi. See
    [embedding evaluation](embedding-eval/qwen3-results/README.md). Validate
    full-stack resource usage and behavior before production activation.
-2. Set up pinned Hindsight v1.0.0 and PostgreSQL/pgvector with loopback access.
-   Test actual API behavior; HTTP mocks are not a deployment test.
-3. Create a dedicated Codex login for Hindsight. No dedicated auth.json exists
-   on the Pi. Do not copy/share rotating credentials from the running agent.
+2. An isolated native Hindsight 1.0.0 / PostgreSQL 17.11 / pgvector 0.8.0
+   stack passed chunk retain, recall and API-restart persistence checks. See
+   [stack evaluation](stack-eval/stack-results/README.md). Luna extraction,
+   consolidation, failure handling and production wiring remain pending.
+3. A dedicated hindsight user and /var/lib/hindsight/codex directory are
+   prepared. Felix must complete the device-code login using
+   stack-eval/login-hindsight.ps1. No existing agent credentials were copied.
 4. Complete service/bootstrap wiring, initial authorized profile ingestion and
    Mental Model creation/refresh. Connect the profile poller to the service.
 5. Finish explicit remember/forget operations, including in-flight cancellation,
@@ -63,7 +66,9 @@ profile outages and preservation of local profile edits.
 
 Felix selected GPT-6 Luna through Codex, local embeddings and no backups for now.
 Qwen3 was downloaded and tested using synthetic data. No backup jobs, Hindsight
-containers, production profile changes or live-service restarts were performed.
+containers, production profile changes or Nanobot restarts were performed.
+A native isolated stack has since been installed and tested with fictional data;
+its test processes are stopped. The productive memory path is still unchanged.
 The example uses OpenAI-compatible HTTP against a local server, without a paid
 embedding API. If Hindsight runs in a container, host loopback requires an
 explicitly chosen network setup; the example is not a deployed configuration.
