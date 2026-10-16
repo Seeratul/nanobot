@@ -1,0 +1,15 @@
+[Unit]
+Description=Nanobot Hindsight outbox and saved profile projection
+After=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/nanobot/memory-sync.env
+ExecStart=%h/.local/share/nanobot/venv/bin/python -m nanobot.memory_sync.service --outbox ${MEMORY_OUTBOX} --api-url ${MEMORY_API_URL} --bank-id ${MEMORY_BANK_ID} --workspace ${MEMORY_WORKSPACE} --profile-state ${MEMORY_PROFILE_STATE}
+Restart=on-failure
+RestartSec=30
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

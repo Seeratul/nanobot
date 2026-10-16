@@ -43,12 +43,15 @@ profile outages and preservation of local profile edits.
 2. An isolated native Hindsight 1.0.0 / PostgreSQL 17.11 / pgvector 0.8.0
    stack passed chunk retain, recall and API-restart persistence checks. See
    [stack evaluation](stack-eval/stack-results/README.md). Luna extraction,
-   consolidation, failure handling and production wiring remain pending.
-3. A dedicated hindsight user and /var/lib/hindsight/codex directory are
-   prepared. Felix must complete the device-code login using
-   stack-eval/login-hindsight.ps1. No existing agent credentials were copied.
-4. Complete service/bootstrap wiring, initial authorized profile ingestion and
-   Mental Model creation/refresh. Connect the profile poller to the service.
+   consolidation and profile generation have since passed acceptance checks;
+   complete production wiring and failure guarantees remain pending.
+3. The dedicated hindsight user and /var/lib/hindsight/codex login are verified.
+   Real gpt-6-luna retain, consolidation, saved profiles, preference correction
+   and async outbox acceptance checks passed. No existing credentials copied.
+   See [Luna evaluation](luna-eval/luna-results/README.md).
+4. The new memory_sync.service runs independent delivery/profile loops and
+   has focused outage tests. Finish durable service/bootstrap wiring and
+   authorized ingestion of the real profiles. The example unit is not enabled.
 5. Finish explicit remember/forget operations, including in-flight cancellation,
    remote deletion, local profile invalidation and suppression of re-import.
    Local outbox suppression alone is not an implemented end-to-end forget tool.
@@ -74,9 +77,14 @@ embedding API. If Hindsight runs in a container, host loopback requires an
 explicitly chosen network setup; the example is not a deployed configuration.
 
 API contract inspected: Hindsight release v1.0.0, published 2026-10-13,
-`hindsight-docs/static/openapi.json`. Runtime HTTP behavior still needs testing.
+`hindsight-docs/static/openapi.json`. Actual chunk and Luna tests now cover
+retain, recall, operations, consolidation and saved Mental Models.
 
 Validation on the Pi: 267 tests and 10 subtests passed; Ruff passed. Strict
 type checking of the five memory modules and three modified existing files
 reported zero errors and zero warnings. These are component checks, not a
 completed live Hindsight migration.
+
+The 2026-10-16 Luna acceptance run used only fictional records. Eighteen focused
+service/worker/profile tests and ten subtests passed; Ruff and strict service
+typing passed. See luna-eval for measurements and precise test limits.

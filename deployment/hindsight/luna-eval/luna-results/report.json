@@ -1,0 +1,602 @@
+{
+  "model": "gpt-6-luna",
+  "provider": "openai-codex",
+  "reasoning_effort": "low",
+  "strict_schema": true,
+  "synthetic_documents": 6,
+  "top1_hits": 4,
+  "top3_hits": 6,
+  "queries": 6,
+  "retains_usage": [
+    {
+      "input_tokens": 1936,
+      "output_tokens": 110,
+      "total_tokens": 2046,
+      "cached_tokens": 0,
+      "thoughts_tokens": 0
+    },
+    {
+      "input_tokens": 1929,
+      "output_tokens": 105,
+      "total_tokens": 2034,
+      "cached_tokens": 0,
+      "thoughts_tokens": 0
+    },
+    {
+      "input_tokens": 1922,
+      "output_tokens": 127,
+      "total_tokens": 2049,
+      "cached_tokens": 0,
+      "thoughts_tokens": 0
+    },
+    {
+      "input_tokens": 1925,
+      "output_tokens": 141,
+      "total_tokens": 2066,
+      "cached_tokens": 0,
+      "thoughts_tokens": 0
+    },
+    {
+      "input_tokens": 1933,
+      "output_tokens": 110,
+      "total_tokens": 2043,
+      "cached_tokens": 0,
+      "thoughts_tokens": 0
+    },
+    {
+      "input_tokens": 1937,
+      "output_tokens": 140,
+      "total_tokens": 2077,
+      "cached_tokens": 0,
+      "thoughts_tokens": 0
+    }
+  ],
+  "results": [
+    {
+      "query": "Welche Sprache bevorzugt Mira fuer Antworten?",
+      "expected_document": "user-baseline",
+      "top1_hit": true,
+      "top3_hit": true,
+      "seconds": 3.1205092459567823,
+      "results": [
+        {
+          "id": "05c0b1b0-6335-46af-861d-561d25064bd2",
+          "text": "Mira prefiere recibir respuestas en alemán y come comida vegana; estas preferencias son suyas y no deben atribuirse a otras personas. | Involving: Mira (usuario)",
+          "type": "world",
+          "entities": [
+            "alemán",
+            "comida vegana",
+            "Mira",
+            "user"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00+00:00",
+          "document_id": "user-baseline",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_user-baseline_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 1.0995337291260083,
+            "reranker": null,
+            "semantic": 0.7384829741264279,
+            "keyword": 0.30000001192092896
+          },
+          "attachments": null
+        },
+        {
+          "id": "28ed5a6b-77e3-49c6-9856-e4159d141dde",
+          "text": "Mira remains vegan. | Involving: Mira",
+          "type": "world",
+          "entities": [
+            "comida vegana",
+            "Mira"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00.010000+00:00",
+          "document_id": "suggestion",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_suggestion_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 0.6047435510541854,
+            "reranker": null,
+            "semantic": 0.5649564266204834,
+            "keyword": 0.30000001192092896
+          },
+          "attachments": null
+        },
+        {
+          "id": "79651a44-9e8e-49b9-bcbb-172f7be2f6dd",
+          "text": "Mira explicitly requests that the assistant be named Lumen, communicate calmly, concisely, and directly, and avoid emojis in ordinary replies. | Involving: Mira (user)",
+          "type": "world",
+          "entities": [
+            "Lumen",
+            "Mira",
+            "user"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00+00:00",
+          "document_id": "soul-baseline",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_soul-baseline_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 0.10995337291260081,
+            "reranker": null,
+            "semantic": 0.665414492214591,
+            "keyword": 0.30000001192092896
+          },
+          "attachments": null
+        }
+      ]
+    },
+    {
+      "query": "What dietary preferences does Mira have?",
+      "expected_document": "user-baseline",
+      "top1_hit": false,
+      "top3_hit": true,
+      "seconds": 2.6130437609972432,
+      "results": [
+        {
+          "id": "28ed5a6b-77e3-49c6-9856-e4159d141dde",
+          "text": "Mira remains vegan. | Involving: Mira",
+          "type": "world",
+          "entities": [
+            "comida vegana",
+            "Mira"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00.010000+00:00",
+          "document_id": "suggestion",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_suggestion_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 1.099533712563965,
+            "reranker": null,
+            "semantic": 0.6486016511917114,
+            "keyword": 0.30000001192092896
+          },
+          "attachments": null
+        },
+        {
+          "id": "05c0b1b0-6335-46af-861d-561d25064bd2",
+          "text": "Mira prefiere recibir respuestas en alemán y come comida vegana; estas preferencias son suyas y no deben atribuirse a otras personas. | Involving: Mira (usuario)",
+          "type": "world",
+          "entities": [
+            "alemán",
+            "comida vegana",
+            "Mira",
+            "user"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00+00:00",
+          "document_id": "user-baseline",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_user-baseline_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 0.6047435418753,
+            "reranker": null,
+            "semantic": 0.7679402461034136,
+            "keyword": 0.30000001192092896
+          },
+          "attachments": null
+        },
+        {
+          "id": "79651a44-9e8e-49b9-bcbb-172f7be2f6dd",
+          "text": "Mira explicitly requests that the assistant be named Lumen, communicate calmly, concisely, and directly, and avoid emojis in ordinary replies. | Involving: Mira (user)",
+          "type": "world",
+          "entities": [
+            "Lumen",
+            "Mira",
+            "user"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00+00:00",
+          "document_id": "soul-baseline",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_soul-baseline_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 0.10995337125005451,
+            "reranker": null,
+            "semantic": 0.45115649409034897,
+            "keyword": 0.30000001192092896
+          },
+          "attachments": null
+        }
+      ]
+    },
+    {
+      "query": "Which database and programming language are used in the Atlas backend?",
+      "expected_document": "atlas-backend",
+      "top1_hit": true,
+      "top3_hit": true,
+      "seconds": 2.9449705299921334,
+      "results": [
+        {
+          "id": "8f266bf4-b793-4600-a7f1-3fdbb9c2a7d6",
+          "text": "Im Projekt Atlas läuft das Backend mit Python 3.12 und PostgreSQL; Redis wurde wegen zusätzlicher Komplexität verworfen. | Redis wurde aufgrund der zusätzlichen Komplexität nicht eingesetzt.",
+          "type": "world",
+          "entities": [
+            "PostgreSQL",
+            "Redis",
+            "Python 3.12",
+            "Projekt Atlas"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00+00:00",
+          "document_id": "atlas-backend",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_atlas-backend_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 1.0995336938172375,
+            "reranker": null,
+            "semantic": 0.755892813205719,
+            "keyword": 0.30000001192092896
+          },
+          "attachments": null
+        },
+        {
+          "id": "0c7dd063-b8d4-4ed0-afe1-31b9256efc9c",
+          "text": "El sitio web público de Atlas utiliza TypeScript y Astro; esta decisión se refiere al sitio web, no a la base de datos del backend. | Aclara que las tecnologías indicadas corresponden al frontend público y no al backend.",
+          "type": "world",
+          "entities": [
+            "base de datos del backend",
+            "frontend público",
+            "Astro",
+            "Atlas",
+            "TypeScript"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00+00:00",
+          "document_id": "atlas-frontend",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_atlas-frontend_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 0.10995336938172373,
+            "reranker": null,
+            "semantic": 0.6947022080421448,
+            "keyword": 0.5
+          },
+          "attachments": null
+        }
+      ]
+    },
+    {
+      "query": "Mit welchem Framework wurde die oeffentliche Atlas-Webseite gebaut?",
+      "expected_document": "atlas-frontend",
+      "top1_hit": true,
+      "top3_hit": true,
+      "seconds": 3.400700434052851,
+      "results": [
+        {
+          "id": "0c7dd063-b8d4-4ed0-afe1-31b9256efc9c",
+          "text": "El sitio web público de Atlas utiliza TypeScript y Astro; esta decisión se refiere al sitio web, no a la base de datos del backend. | Aclara que las tecnologías indicadas corresponden al frontend público y no al backend.",
+          "type": "world",
+          "entities": [
+            "base de datos del backend",
+            "frontend público",
+            "Astro",
+            "Atlas",
+            "TypeScript"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00+00:00",
+          "document_id": "atlas-frontend",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_atlas-frontend_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 1.0995336722523719,
+            "reranker": null,
+            "semantic": 0.660603543484001,
+            "keyword": 0.20000000298023224
+          },
+          "attachments": null
+        },
+        {
+          "id": "8f266bf4-b793-4600-a7f1-3fdbb9c2a7d6",
+          "text": "Im Projekt Atlas läuft das Backend mit Python 3.12 und PostgreSQL; Redis wurde wegen zusätzlicher Komplexität verworfen. | Redis wurde aufgrund der zusätzlichen Komplexität nicht eingesetzt.",
+          "type": "world",
+          "entities": [
+            "PostgreSQL",
+            "Redis",
+            "Python 3.12",
+            "Projekt Atlas"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00+00:00",
+          "document_id": "atlas-backend",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_atlas-backend_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 0.10995336722523716,
+            "reranker": null,
+            "semantic": 0.5983327866594333,
+            "keyword": 0.5
+          },
+          "attachments": null
+        }
+      ]
+    },
+    {
+      "query": "When should the assistant send notifications?",
+      "expected_document": "notifications",
+      "top1_hit": false,
+      "top3_hit": true,
+      "seconds": 2.5163883970235474,
+      "results": [
+        {
+          "id": "79651a44-9e8e-49b9-bcbb-172f7be2f6dd",
+          "text": "Mira explicitly requests that the assistant be named Lumen, communicate calmly, concisely, and directly, and avoid emojis in ordinary replies. | Involving: Mira (user)",
+          "type": "world",
+          "entities": [
+            "Lumen",
+            "Mira",
+            "user"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00+00:00",
+          "document_id": "soul-baseline",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_soul-baseline_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 1.0995336564045217,
+            "reranker": null,
+            "semantic": 0.46030980112015096,
+            "keyword": 0.10000000149011612
+          },
+          "attachments": null
+        },
+        {
+          "id": "aecc5da5-c355-4267-be08-5d7222bb0b18",
+          "text": "Benachrichtigungen sollen nur bei erledigten Aufgaben, Fehlern oder nötigen Entscheidungen erscheinen; wiederholte Meldungen ohne neue Information sind unerwünscht.",
+          "type": "world",
+          "entities": [
+            "Benachrichtigungen"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00+00:00",
+          "document_id": "notifications",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_notifications_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 0.7696735594831652,
+            "reranker": null,
+            "semantic": 0.6394504689842754,
+            "keyword": null
+          },
+          "attachments": null
+        },
+        {
+          "id": "05c0b1b0-6335-46af-861d-561d25064bd2",
+          "text": "Mira prefiere recibir respuestas en alemán y come comida vegana; estas preferencias son suyas y no deben atribuirse a otras personas. | Involving: Mira (usuario)",
+          "type": "world",
+          "entities": [
+            "comida vegana",
+            "alemán",
+            "Mira",
+            "user"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00+00:00",
+          "document_id": "user-baseline",
+          "metadata": null,
+          "chunk_id": "synthetic-luna-v1_user-baseline_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 0.4398134625618087,
+            "reranker": null,
+            "semantic": null,
+            "keyword": null
+          },
+          "attachments": null
+        }
+      ]
+    },
+    {
+      "query": "What is the assistant name and communication style requested by Mira?",
+      "expected_document": "soul-baseline",
+      "top1_hit": true,
+      "top3_hit": true,
+      "seconds": 3.0253585890168324,
+      "results": [
+        {
+          "id": "79651a44-9e8e-49b9-bcbb-172f7be2f6dd",
+          "text": "Mira explicitly requests that the assistant be named Lumen, communicate calmly, concisely, and directly, and avoid emojis in ordinary replies. | Involving: Mira (user)",
+          "type": "world",
+          "entities": [
+            "Lumen",
+            "Mira",
+            "user"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00+00:00",
+          "document_id": "soul-baseline",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_soul-baseline_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 1.0995336371056252,
+            "reranker": null,
+            "semantic": 0.6990294039828052,
+            "keyword": 0.699999988079071
+          },
+          "attachments": null
+        },
+        {
+          "id": "05c0b1b0-6335-46af-861d-561d25064bd2",
+          "text": "Mira prefiere recibir respuestas en alemán y come comida vegana; estas preferencias son suyas y no deben atribuirse a otras personas. | Involving: Mira (usuario)",
+          "type": "world",
+          "entities": [
+            "alemán",
+            "comida vegana",
+            "Mira",
+            "user"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00+00:00",
+          "document_id": "user-baseline",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_user-baseline_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 0.6047435004080939,
+            "reranker": null,
+            "semantic": 0.5560866097134465,
+            "keyword": 0.30000001192092896
+          },
+          "attachments": null
+        },
+        {
+          "id": "28ed5a6b-77e3-49c6-9856-e4159d141dde",
+          "text": "Mira remains vegan. | Involving: Mira",
+          "type": "world",
+          "entities": [
+            "comida vegana",
+            "Mira"
+          ],
+          "context": "",
+          "occurred_start": null,
+          "occurred_end": null,
+          "mentioned_at": "2026-10-15T12:00:00.010000+00:00",
+          "document_id": "suggestion",
+          "metadata": {},
+          "chunk_id": "synthetic-luna-v1_suggestion_0",
+          "tags": [],
+          "source_fact_ids": null,
+          "scores": {
+            "final": 0.10995336371690446,
+            "reranker": null,
+            "semantic": 0.5097891676677302,
+            "keyword": 0.30000001192092896
+          },
+          "attachments": null
+        }
+      ]
+    }
+  ],
+  "consolidation_observations": [
+    {
+      "id": "2f53420b-a235-4eb8-952f-a973cc116e99",
+      "text": "Mira prefiere recibir respuestas en alemán y come comida vegana; estas preferencias son de Mira y no deben atribuirse a otras personas.",
+      "type": "observation",
+      "entities": [
+        "comida vegana",
+        "alemán",
+        "Mira",
+        "user"
+      ],
+      "context": null,
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-15T12:00:00.010000+00:00",
+      "document_id": null,
+      "metadata": {},
+      "chunk_id": null,
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 1.1071546222014352,
+        "reranker": null,
+        "semantic": 0.6927791237831116,
+        "keyword": 0.20000000298023224
+      },
+      "attachments": null
+    },
+    {
+      "id": "18684e8e-a7b9-4365-85c8-1893ee856137",
+      "text": "Mira requests that the assistant be named Lumen, communicate calmly, concisely, and directly, and avoid emojis in ordinary replies.",
+      "type": "observation",
+      "entities": [
+        "Lumen",
+        "user",
+        "Mira"
+      ],
+      "context": null,
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-15T12:00:00+00:00",
+      "document_id": null,
+      "metadata": {},
+      "chunk_id": null,
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.10995332384956237,
+        "reranker": null,
+        "semantic": 0.5062218315865828,
+        "keyword": 0.10000000149011612
+      },
+      "attachments": null
+    }
+  ],
+  "mental_models": {
+    "agent-soul": "# Soul\n\n- **Name:** Lumen\n- **Tone:** Calm, concise, and direct.\n- **Communication:** Avoid emojis in ordinary replies.\n",
+    "user-profile": "# User\n\n- Prefers the assistant to be called Lumen.\n- Prefers calm, concise, direct communication; avoid emojis in ordinary replies.\n- Prefers responses in German.\n- Eats vegan food.\n"
+  },
+  "profile_projection": {
+    "agent-soul": "updated",
+    "user-profile": "updated"
+  },
+  "profile_local_edit_protected": true,
+  "profile_api_outage_preserved_files": true,
+  "real_async_outbox_completed_after_worker_restart": true,
+  "duplicate_operation_id_reused": true,
+  "simulated_http_429_preserved_pending_job_with_backoff": true,
+  "system_available_min_mib": 1943.1640625,
+  "additional_swap_mib": 76.10546875,
+  "temperature_max_c": 66.705
+}

@@ -1,0 +1,413 @@
+{
+  "configured_internal_output_language": "English",
+  "user_correction_advanced_saved_model": true,
+  "user_profile": "# User\n\n- Prefers answers in English since October 16, 2026, replacing an earlier preference for German.\n- Eats vegan food.\n- Plays the cello in their free time.\n- Prefers the assistant to be named Lumen and to communicate calmly, concisely, and directly; avoid emojis in ordinary replies.\n",
+  "unchanged_soul": "# Soul\n\n- **Name:** Lumen\n- **Tone:** Calm, concise, and direct.\n- **Communication:** Avoid emojis in ordinary replies.\n",
+  "recall_results": [
+    {
+      "id": "8abd1294-e888-4f67-a436-dd70d9647d79",
+      "text": "Mira prefers answers in English from October 16, 2026 onward, replacing her earlier preference for German.",
+      "type": "observation",
+      "entities": [
+        "English",
+        "German",
+        "user",
+        "Mira"
+      ],
+      "context": null,
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-16T12:00:00+00:00",
+      "document_id": null,
+      "metadata": {},
+      "chunk_id": null,
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 1.1,
+        "reranker": null,
+        "semantic": 0.7650938158044892,
+        "keyword": 0.30000001192092896
+      },
+      "attachments": null
+    },
+    {
+      "id": "3013208a-d7ab-4464-b4d9-bf115e7bf237",
+      "text": "Mira prefers answers in English from now on, replacing her earlier preference for German answers. | When: From October 16, 2026 onward | Involving: Mira (user) | Explicit correction superseding her earlier language preference.",
+      "type": "world",
+      "entities": [
+        "user",
+        "German",
+        "English",
+        "Mira"
+      ],
+      "context": "Explicit user correction. Newer user preference supersedes the older USER.md baseline.",
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-16T12:00:00+00:00",
+      "document_id": "explicit-language-correction",
+      "metadata": {},
+      "chunk_id": "synthetic-luna-v1_explicit-language-correction_0",
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 1.0292857142857144,
+        "reranker": null,
+        "semantic": 0.633797401272814,
+        "keyword": 0.800000011920929
+      },
+      "attachments": null
+    },
+    {
+      "id": "2f53420b-a235-4eb8-952f-a973cc116e99",
+      "text": "Mira eats vegan food; she prefers answers in English from October 16, 2026 onward, replacing her earlier preference for German. These preferences belong to Mira and should not be attributed to others.",
+      "type": "observation",
+      "entities": [
+        "German",
+        "alemán",
+        "Mira",
+        "vegan food",
+        "user",
+        "comida vegana",
+        "English"
+      ],
+      "context": null,
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-16T12:00:00.010000+00:00",
+      "document_id": null,
+      "metadata": {},
+      "chunk_id": null,
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.9718600502330208,
+        "reranker": null,
+        "semantic": 0.6939028136614783,
+        "keyword": 0.5
+      },
+      "attachments": null
+    },
+    {
+      "id": "2e92cbf3-9cbc-4a65-9534-4282b37fb7e2",
+      "text": "Mira eats vegan food. | Involving: Mira (user)",
+      "type": "world",
+      "entities": [
+        "user",
+        "Mira",
+        "vegan food"
+      ],
+      "context": "Explicit user correction. Newer user preference supersedes the older USER.md baseline.",
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-16T12:00:00.010000+00:00",
+      "document_id": "explicit-language-correction",
+      "metadata": {},
+      "chunk_id": "synthetic-luna-v1_explicit-language-correction_0",
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.8878571428571429,
+        "reranker": null,
+        "semantic": 0.5215237191972212,
+        "keyword": 0.4000000059604645
+      },
+      "attachments": null
+    },
+    {
+      "id": "02423a93-0a5e-463d-a02c-905caa711456",
+      "text": "The assistant's name remains Lumen. | Involving: Assistant (Lumen)",
+      "type": "world",
+      "entities": [
+        "Lumen"
+      ],
+      "context": "Explicit user correction. Newer user preference supersedes the older USER.md baseline.",
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-16T12:00:00.020000+00:00",
+      "document_id": "explicit-language-correction",
+      "metadata": {},
+      "chunk_id": "synthetic-luna-v1_explicit-language-correction_0",
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.8171428571428573,
+        "reranker": null,
+        "semantic": null,
+        "keyword": 0.10000000149011612
+      },
+      "attachments": null
+    },
+    {
+      "id": "18684e8e-a7b9-4365-85c8-1893ee856137",
+      "text": "Mira requests that the assistant be named Lumen, communicate calmly, concisely, and directly, and avoid emojis in ordinary replies; the assistant's name remains Lumen.",
+      "type": "observation",
+      "entities": [
+        "user",
+        "Lumen",
+        "Mira"
+      ],
+      "context": null,
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-16T12:00:00.020000+00:00",
+      "document_id": null,
+      "metadata": {},
+      "chunk_id": null,
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.7516024200263226,
+        "reranker": null,
+        "semantic": 0.5308863156431087,
+        "keyword": 0.10000000149011612
+      },
+      "attachments": null
+    },
+    {
+      "id": "05c0b1b0-6335-46af-861d-561d25064bd2",
+      "text": "Mira prefiere recibir respuestas en alemán y come comida vegana; estas preferencias son suyas y no deben atribuirse a otras personas. | Involving: Mira (usuario)",
+      "type": "world",
+      "entities": [
+        "comida vegana",
+        "user",
+        "alemán",
+        "Mira"
+      ],
+      "context": "",
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-15T12:00:00+00:00",
+      "document_id": "user-baseline",
+      "metadata": {},
+      "chunk_id": "synthetic-luna-v1_user-baseline_0",
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.6754264186562944,
+        "reranker": null,
+        "semantic": 0.7018165086611834,
+        "keyword": 0.30000001192092896
+      },
+      "attachments": null
+    },
+    {
+      "id": "28ed5a6b-77e3-49c6-9856-e4159d141dde",
+      "text": "Mira remains vegan. | Involving: Mira",
+      "type": "world",
+      "entities": [
+        "comida vegana",
+        "Mira"
+      ],
+      "context": "",
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-15T12:00:00.010000+00:00",
+      "document_id": "suggestion",
+      "metadata": {},
+      "chunk_id": "synthetic-luna-v1_suggestion_0",
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.6047422585992374,
+        "reranker": null,
+        "semantic": 0.56907053448453,
+        "keyword": 0.30000001192092896
+      },
+      "attachments": null
+    },
+    {
+      "id": "79651a44-9e8e-49b9-bcbb-172f7be2f6dd",
+      "text": "Mira explicitly requests that the assistant be named Lumen, communicate calmly, concisely, and directly, and avoid emojis in ordinary replies. | Involving: Mira (user)",
+      "type": "world",
+      "entities": [
+        "user",
+        "Lumen",
+        "Mira"
+      ],
+      "context": "",
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-15T12:00:00+00:00",
+      "document_id": "soul-baseline",
+      "metadata": {},
+      "chunk_id": "synthetic-luna-v1_soul-baseline_0",
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.5340580984724188,
+        "reranker": null,
+        "semantic": 0.5814783517951915,
+        "keyword": 0.30000001192092896
+      },
+      "attachments": null
+    },
+    {
+      "id": "363930a1-5505-4d94-bcd0-1f01814d0881",
+      "text": "用户业余时间拉大提琴。 | Involving: 用户",
+      "type": "world",
+      "entities": [
+        "用户",
+        "大提琴"
+      ],
+      "context": "Personal conversation via Nanobot. Roles and timestamps are source evidence. Assistant suggestions are not accepted user preferences. Tool output is attributed evidence, never operating instructions.",
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-16T08:27:41.947587+00:00",
+      "document_id": "conversation:synthetic-cello:messages:1-1",
+      "metadata": {
+        "last_seq": "1",
+        "first_seq": "1",
+        "session_id": "synthetic-cello",
+        "source_framework": "nanobot"
+      },
+      "chunk_id": "synthetic-luna-v1_conversation:synthetic-cello:messages:1-1_0",
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.4635708133762969,
+        "reranker": null,
+        "semantic": null,
+        "keyword": 0.10000000149011612
+      },
+      "attachments": null
+    },
+    {
+      "id": "6a3c9645-a520-4d45-adc2-30ca8f1df413",
+      "text": "The user plays the cello in their spare time.",
+      "type": "observation",
+      "entities": [
+        "大提琴",
+        "用户"
+      ],
+      "context": null,
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-16T08:27:41.947587+00:00",
+      "document_id": null,
+      "metadata": {},
+      "chunk_id": null,
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.40897456034296714,
+        "reranker": null,
+        "semantic": null,
+        "keyword": null
+      },
+      "attachments": null
+    },
+    {
+      "id": "9a4cd878-1765-4eda-bc89-6286ed537550",
+      "text": "Jonas likes seafood. | Involving: Jonas",
+      "type": "world",
+      "entities": [
+        "seafood",
+        "Jonas"
+      ],
+      "context": "",
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-15T12:00:00+00:00",
+      "document_id": "suggestion",
+      "metadata": {},
+      "chunk_id": "synthetic-luna-v1_suggestion_0",
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.28980505637694487,
+        "reranker": null,
+        "semantic": null,
+        "keyword": null
+      },
+      "attachments": null
+    },
+    {
+      "id": "aecc5da5-c355-4267-be08-5d7222bb0b18",
+      "text": "Benachrichtigungen sollen nur bei erledigten Aufgaben, Fehlern oder nötigen Entscheidungen erscheinen; wiederholte Meldungen ohne neue Information sind unerwünscht.",
+      "type": "world",
+      "entities": [
+        "Benachrichtigungen"
+      ],
+      "context": "",
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-15T12:00:00+00:00",
+      "document_id": "notifications",
+      "metadata": {},
+      "chunk_id": "synthetic-luna-v1_notifications_0",
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.2261893122942009,
+        "reranker": null,
+        "semantic": null,
+        "keyword": null
+      },
+      "attachments": null
+    },
+    {
+      "id": "0c7dd063-b8d4-4ed0-afe1-31b9256efc9c",
+      "text": "El sitio web público de Atlas utiliza TypeScript y Astro; esta decisión se refiere al sitio web, no a la base de datos del backend. | Aclara que las tecnologías indicadas corresponden al frontend público y no al backend.",
+      "type": "world",
+      "entities": [
+        "base de datos del backend",
+        "TypeScript",
+        "frontend público",
+        "Astro",
+        "Atlas"
+      ],
+      "context": "",
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-15T12:00:00+00:00",
+      "document_id": "atlas-frontend",
+      "metadata": {},
+      "chunk_id": "synthetic-luna-v1_atlas-frontend_0",
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.16257356821145688,
+        "reranker": null,
+        "semantic": null,
+        "keyword": null
+      },
+      "attachments": null
+    },
+    {
+      "id": "8f266bf4-b793-4600-a7f1-3fdbb9c2a7d6",
+      "text": "Im Projekt Atlas läuft das Backend mit Python 3.12 und PostgreSQL; Redis wurde wegen zusätzlicher Komplexität verworfen. | Redis wurde aufgrund der zusätzlichen Komplexität nicht eingesetzt.",
+      "type": "world",
+      "entities": [
+        "PostgreSQL",
+        "Projekt Atlas",
+        "Redis",
+        "Python 3.12"
+      ],
+      "context": "",
+      "occurred_start": null,
+      "occurred_end": null,
+      "mentioned_at": "2026-10-15T12:00:00+00:00",
+      "document_id": "atlas-backend",
+      "metadata": {},
+      "chunk_id": "synthetic-luna-v1_atlas-backend_0",
+      "tags": [],
+      "source_fact_ids": null,
+      "scores": {
+        "final": 0.09895782412871289,
+        "reranker": null,
+        "semantic": null,
+        "keyword": null
+      },
+      "attachments": null
+    }
+  ],
+  "retain_usage": {
+    "input_tokens": 1974,
+    "output_tokens": 264,
+    "total_tokens": 2238,
+    "cached_tokens": 0,
+    "thoughts_tokens": 0
+  },
+  "note": "Synthetic correction only; no production profile files touched."
+}
