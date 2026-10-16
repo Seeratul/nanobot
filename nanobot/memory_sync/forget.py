@@ -1,4 +1,4 @@
-"""Quiesce the dedicated worker before deleting a source conversation."""
+"""Quiesce writers before retiring selected facts or deleting an explicit source."""
 from __future__ import annotations
 
 import asyncio
@@ -130,6 +130,7 @@ class ForgetWorker:
             if request is None:
                 return "needs_attention"
             conversation_id, receipts = request
+            revision = self.worker.outbox.forget_revision(conversation_id)
             owned = self.worker.client is None
             client = self.worker.client or httpx.AsyncClient(
                 transport=PinnedDNSAsyncTransport(allow_loopback=True),
@@ -141,9 +142,32 @@ class ForgetWorker:
                 version.raise_for_status()
                 if version.json().get("features", {}).get("worker") is not False:
                     raise ValueError("forget requires API worker disabled")
+                targets = self.worker.outbox.fact_targets(conversation_id)
                 for document_id, operation_id in receipts:
                     await self._cancel_tree(client, base, operation_id)
-                    response = await client.delete(base + "/documents/" + quote(document_id, safe=""))
+                    if not targets:
+                        response = await client.delete(base + "/documents/" + quote(document_id, safe=""))
+                        if response.status_code != 404:
+                            response.raise_for_status()
+                source_documents = {document_id for document_id, _ in receipts}
+                for memory_id in targets:
+                    response = await client.get(base + "/memories/" + memory_id)
+                    if response.status_code == 404:
+                        continue
+                    response.raise_for_status()
+                    raw: object = response.json()
+                    if not isinstance(raw, dict):
+                        raise ValueError("invalid fact response")
+                    fact = cast(dict[str, Any], raw)
+                    if (fact.get("id") != memory_id
+                            or not isinstance(fact.get("document_id"), str)
+                            or fact.get("document_id") not in source_documents
+                            or fact.get("type") not in ("world", "experience")):
+                        raise ValueError("fact does not belong to the selected source")
+                for memory_id in targets:
+                    response = await client.patch(base + "/memories/" + memory_id, json={
+                        "state": "invalidated", "reason": "Explicit user request to forget this fact",
+                    })
                     if response.status_code != 404:
                         response.raise_for_status()
                 # Delete saved generated content and any stale refresh result.
@@ -155,10 +179,14 @@ class ForgetWorker:
                     response = await client.post(base + "/mental-models", json={
                         "id": model_id, "name": model_id,
                         "source_query": PROFILE_QUERIES[model_id],
-                        "max_tokens": 750, "refresh_after_consolidation": True,
+                        "max_tokens": 750, "trigger": {
+                            "refresh_after_consolidation": True,
+                            "include_chunks": False, "exclude_mental_models": True,
+                        },
                     })
                     response.raise_for_status()
-                self.worker.outbox.complete_forget(conversation_id)
+                if not self.worker.outbox.complete_forget(conversation_id, revision=revision):
+                    return "more_pending"
                 if self.worker.outbox.unpause_if_complete():
                     await self.control.start()
                     self.worker.outbox.clear_resume()

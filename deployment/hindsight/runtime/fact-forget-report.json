@@ -1,0 +1,10 @@
+{
+  "no_new_privileges": true,
+  "selected_facts_retired": 1,
+  "other_fact_ids_preserved": 1,
+  "shared_document_preserved": true,
+  "reimport_blocked": true,
+  "recall_target_absent_other_present": true,
+  "regenerated_profiles_target_absent_other_present": true,
+  "synthetic_bank_removed": true
+}

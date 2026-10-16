@@ -30,10 +30,14 @@ Heavy concurrent Nanobot work and a large initial history import remain untested
 
 ## Forget protocol implemented so far
 
-This implementation deletes an entire source conversation from the long-term
-bank, not a selectively chosen individual fact. Its user-facing tool is not
-connected pending Felix's choice of granularity. It does not erase the original
-chat archive or the still-open conversation context and is not forensic erasure.
+Felix chose selective forgetting. request_fact_forget accepts concrete source
+fact IDs, validates their owning document and type, and uses Hindsight's native
+state=invalidated curation. Other live fact IDs and the shared document remain.
+Invalidated facts are excluded from recall/consolidation; their audit archive
+and the original chat archive remain. This is not forensic erasure or removal
+of text already present in the still-open conversation. The older whole-source
+administrative routine remains for compatibility and is not the requested
+user-facing forget contract.
 
 1. A SQLite transaction tombstones the source, erases local queued payloads and
    records its document/operation receipts. The durable pause signal is written
@@ -47,7 +51,10 @@ chat archive or the still-open conversation context and is not forensic erasure.
    an authorized forget operation is performed; no backup copy is made.
 4. All parent AND child operations are cancelled. Parent cancellation alone
    does not cancel child retains in this Hindsight version. Source documents
-   and their associated facts/grounded observations are deleted.
+   are deleted only in the older whole-source mode. In selected-fact mode the
+   worker instead validates each target's owning document and source fact type,
+   then PATCHes only those facts to invalidated. Grounded observations are
+   invalidated by Hindsight and remaining facts can be consolidated again.
 5. Both saved Mental Models are removed and recreated from remaining evidence.
    Their refreshes cannot run while the worker is stopped.
 6. Only after all queued deletions complete is the pause signal removed. The
@@ -82,9 +89,8 @@ real acceptance test with the protection enabled. No rejected change was applied
 
 ## Remaining activation work
 
-Resolve whether the requested forget tool must selectively remove facts or may
-remove whole source conversations. Then finish the appropriate tool contract,
-explicit remember, real profile bootstrap, memory-sync unit activation, MCP
+Selective forgetting is chosen and implemented at the queue/worker boundary.
+Finish the fact-only tool contract, explicit remember, real profile bootstrap, memory-sync unit activation, MCP
 client configuration, Dream/runtime MEMORY.md removal and controlled Nanobot
 switch. Test long mixed/code inputs against the embedding context limit before
 history import. The current standalone runtime is ready; the Nanobot memory
@@ -101,3 +107,35 @@ memory-sync unit must retain NoNewPrivileges=true and pass
 --pause-file /var/lib/hindsight/control/forget-pending; Nanobot's explicit
 agents.defaults.hindsight.pauseFile must use the same path. Real profile seeding
 and baseline registration must finish before starting that unit.
+
+## Selective fact acceptance, 2026-10-16
+
+The final real test retained town and instrument facts in the SAME document.
+Only the town fact was retired. The instrument's original fact ID and shared
+source document remained, recall returned the instrument without the town,
+and both saved Mental Models plus local USER.md were regenerated without the
+town. USER.md still contained the instrument. The test ran as nanobot under
+NoNewPrivileges=true; its fictional bank was then removed. See
+fact-forget-report.json and real_fact_forget_test.py.
+
+514 tests and 10 subtests passed across the affected recovery, memory and config
+selection. Ruff passed; strict type checking of the two changed production
+modules reported zero errors/warnings. Tests cover invalid IDs, wrong source,
+source preservation and revisions preventing a later fact request from being
+acknowledged by an earlier in-flight attempt. Legacy outboxes receive a serialized
+schema upgrade for revisions and the fact-target table.
+
+Internal reflection now has HINDSIGHT_API_RECALL_INCLUDE_CHUNKS=false. New Mental
+Models explicitly set trigger.include_chunks=false, exclude_mental_models=true,
+and refresh_after_consolidation=true. The trigger object is required: sending
+refresh_after_consolidation at the request root is silently ignored in this API.
+An initial last_refreshed_at alone does not prove content generation completed;
+acceptance waits for nonempty saved content before checking the profile.
+
+The original source identity is quarantined against replay. This currently also
+suspends further automatic exports for that still-open source until /new rotates
+its identity. The user-facing workflow must create a safe new export/context
+boundary before activation. The caller must identify all intended fact IDs if a
+piece of information has duplicate/paraphrased entries; one UUID is not a semantic
+ban on all future restatements or manually rewritten/forked source identities.
+The production Nanobot is still unchanged; no real profiles or chats were imported.

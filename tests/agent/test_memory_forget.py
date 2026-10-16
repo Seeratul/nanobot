@@ -25,7 +25,7 @@ class Control:
         self.stopped = False
 
 
-def setup(tmp_path, *, api_worker=False, child=False):
+def setup(tmp_path, *, api_worker=False, child=False, wrong_source=False):
     outbox = MemoryOutbox(tmp_path / 'outbox.sqlite3')
     document = outbox.enqueue('conversation-a', 'cli:test', ['original'], ['user: fictional secret'])
     workspace = tmp_path / 'workspace'
@@ -41,6 +41,9 @@ def setup(tmp_path, *, api_worker=False, child=False):
         assert control.stopped, 'no API request before process quiescence'
         if request.url.path == '/version':
             return httpx.Response(200, json={'features': {'worker': api_worker}})
+        if request.method == 'GET' and '/memories/' in request.url.path:
+            return httpx.Response(200, json={'id': request.url.path.rsplit('/', 1)[-1],
+                'document_id': 'wrong' if wrong_source else document, 'type': 'world'})
         if request.method == 'GET' and '/operations/' in request.url.path:
             return httpx.Response(200, json={'child_operations': (
                 [{'operation_id': '00000000-0000-0000-0000-000000000001', 'status': 'processing'}]
@@ -226,3 +229,55 @@ async def test_restart_between_completed_receipt_and_pause_removal(tmp_path):
         assert control.starts == 1
         assert not outbox.forget_pending() and not outbox.resume_needed()
         assert not requests
+
+
+@pytest.mark.asyncio
+async def test_fact_forget_preserves_source_and_only_retires_selected_fact(tmp_path):
+    outbox, document, control, requests, _, client, exporter = setup(tmp_path)
+    memory_id = '00000000-0000-0000-0000-000000000042'
+    async with client:
+        conversation = outbox.request_fact_forget(document, [memory_id])
+        assert outbox.fact_targets(conversation) == [memory_id]
+        assert await ForgetWorker(exporter.worker, exporter, control).run_once() == 'forgotten'
+        assert not any(r.method == 'DELETE' and '/documents/' in r.url.path for r in requests)
+        patches = [r for r in requests if r.method == 'PATCH']
+        assert len(patches) == 1
+        assert patches[0].url.path.endswith(memory_id)
+        assert json.loads(patches[0].content)['state'] == 'invalidated'
+        assert outbox.enqueue('conversation-a', 'cli:test', ['old'], ['old']) is None
+
+
+def test_invalid_fact_ids_cannot_fall_back_to_whole_source_deletion(tmp_path):
+    outbox = MemoryOutbox(tmp_path / 'outbox.sqlite3')
+    document = outbox.enqueue('one', 'cli:test', ['one'], ['fictional'])
+    for ids in ([], ['not-a-uuid']):
+        with pytest.raises(ValueError):
+            outbox.request_fact_forget(document, ids)
+        assert not outbox.forget_pending()
+        assert outbox.next_job() is not None
+
+
+@pytest.mark.asyncio
+async def test_fact_from_another_source_is_not_modified(tmp_path):
+    outbox, document, control, requests, _, client, exporter = setup(tmp_path, wrong_source=True)
+    async with client:
+        outbox.request_fact_forget(document, ['00000000-0000-0000-0000-000000000042'])
+        with pytest.raises(ValueError, match='selected source'):
+            await ForgetWorker(exporter.worker, exporter, control).run_once()
+        assert not any(r.method == 'PATCH' for r in requests)
+        assert control.stopped and outbox.forget_pending()
+
+
+def test_later_fact_request_cannot_be_acknowledged_by_earlier_revision(tmp_path):
+    outbox = MemoryOutbox(tmp_path / 'outbox.sqlite3')
+    document = outbox.enqueue('one', 'cli:test', ['one'], ['fictional'])
+    first = '00000000-0000-0000-0000-000000000001'
+    second = '00000000-0000-0000-0000-000000000002'
+    conversation = outbox.request_fact_forget(document, [first])
+    revision = outbox.forget_revision(conversation)
+    outbox.request_fact_forget(document, [second])
+    assert not outbox.complete_forget(conversation, revision=revision)
+    assert outbox.next_forget() is not None
+    assert outbox.forget_pending()
+    assert outbox.fact_targets(conversation) == [first, second]
+    assert outbox.complete_forget(conversation, revision=outbox.forget_revision(conversation))

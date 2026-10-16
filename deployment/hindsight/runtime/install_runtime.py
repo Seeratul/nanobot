@@ -103,6 +103,7 @@ def main():
         'HINDSIGHT_API_EMBEDDINGS_QUERY_PREFIX': 'Instruct: Given a question about past conversations, retrieve the relevant memory that answers it.\nQuery: ',
         'HINDSIGHT_API_EMBEDDINGS_PASSAGE_PREFIX': '',
         'HINDSIGHT_API_RERANKER_PROVIDER': 'rrf',
+        'HINDSIGHT_API_RECALL_INCLUDE_CHUNKS': 'false',
         'HINDSIGHT_API_DB_POOL_MIN_SIZE': '1',
         'HINDSIGHT_API_DB_POOL_MAX_SIZE': '6',
         'HINDSIGHT_API_WORKER_MAX_SLOTS': '1',

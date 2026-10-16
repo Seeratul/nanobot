@@ -97,3 +97,9 @@ under NoNewPrivileges=true. Nanobot itself is not switched. See
 [runtime installation and test limits](runtime/README.md). Multi-round runtime
 recovery has also been fixed and validated; see [recovery validation](recovery-validation.md).
 Earlier pending items above describe the checkpoints before these later tests.
+
+Selective fact forgetting was chosen and validated afterward: the target fact
+is retired while the shared document and other fact IDs remain. Internal raw
+chunk recall is disabled for reflection. Real profile regeneration preserves
+unrelated facts and omits the retired one. 514 tests and 10 subtests passed.
+See runtime/README.md for the remaining active-conversation/tool integration work.

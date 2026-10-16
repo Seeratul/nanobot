@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 
 @dataclass(frozen=True)
@@ -64,10 +64,18 @@ class MemoryOutbox:
                 );
                 CREATE TABLE IF NOT EXISTS forget_requests (
                     conversation_id TEXT PRIMARY KEY,
-                    state TEXT NOT NULL DEFAULT 'pending'
+                    state TEXT NOT NULL DEFAULT 'pending', revision INTEGER NOT NULL DEFAULT 0
+                );
+                CREATE TABLE IF NOT EXISTS forget_targets (
+                    conversation_id TEXT NOT NULL, memory_id TEXT NOT NULL,
+                    PRIMARY KEY(conversation_id, memory_id)
                 );
                 CREATE INDEX IF NOT EXISTS jobs_ready ON jobs(state, next_attempt_at);
             """)
+            # executescript ends the transaction; serialize legacy schema upgrades.
+            db.execute("BEGIN IMMEDIATE")
+            if not any(row["name"] == "revision" for row in db.execute("PRAGMA table_info(forget_requests)")):
+                db.execute("ALTER TABLE forget_requests ADD COLUMN revision INTEGER NOT NULL DEFAULT 0")
             db.execute("INSERT OR IGNORE INTO settings(key,value) VALUES ('bank_id',?)", (bank_id,))
             stored = db.execute("SELECT value FROM settings WHERE key='bank_id'").fetchone()[0]
             if stored != bank_id:
@@ -163,12 +171,16 @@ class MemoryOutbox:
             )
             return document_id if content else None
 
-    def request_forget(self, document_id: str) -> str:
-        """Tombstone the whole source conversation before any remote deletion.
+    def request_forget(self, document_id: str, *, memory_ids: list[str] | None = None) -> str:
+        """Quarantine the source before targeted retirement or explicit source deletion.
 
         The pause file is written first so a crash cannot restart the remote
         worker between a deletion request and its durable outbox transaction.
         """
+        if memory_ids is not None:
+            if not memory_ids:
+                raise ValueError("explicit fact identities are required")
+            memory_ids = [str(UUID(value)) for value in memory_ids]
         with self._connect() as db:
             row = db.execute("SELECT conversation_id FROM jobs WHERE document_id=?",
                              (document_id,)).fetchone()
@@ -190,9 +202,23 @@ class MemoryOutbox:
             db.execute("UPDATE jobs SET state='suppressed', payload='', payload_hash='' "
                        "WHERE conversation_id=?", (conversation_id,))
             db.execute("INSERT INTO forget_requests(conversation_id) VALUES (?) "
-                       "ON CONFLICT(conversation_id) DO UPDATE SET state='pending'",
+                       "ON CONFLICT(conversation_id) DO UPDATE SET state='pending', revision=revision+1",
                        (conversation_id,))
+            for memory_id in memory_ids or []:
+                db.execute("INSERT OR IGNORE INTO forget_targets(conversation_id,memory_id) "
+                           "VALUES (?,?)", (conversation_id, memory_id))
             return conversation_id
+
+    def request_fact_forget(self, document_id: str, memory_ids: list[str]) -> str:
+        """Retire selected facts while retaining the source's other live facts."""
+        return self.request_forget(document_id, memory_ids=memory_ids)
+
+    def fact_targets(self, conversation_id: str) -> list[str]:
+        with self._connect() as db:
+            return [str(row["memory_id"]) for row in db.execute(
+                "SELECT memory_id FROM forget_targets WHERE conversation_id=? ORDER BY memory_id",
+                (conversation_id,),
+            )]
 
     @property
     def pause_path(self) -> Path:
@@ -215,12 +241,25 @@ class MemoryOutbox:
             )]
             return conversation_id, receipts
 
-    def complete_forget(self, conversation_id: str) -> None:
+    def forget_revision(self, conversation_id: str) -> int:
         with self._connect() as db:
-            db.execute("UPDATE forget_requests SET state='completed' WHERE conversation_id=?",
-                       (conversation_id,))
+            row = db.execute("SELECT revision FROM forget_requests WHERE conversation_id=?",
+                             (conversation_id,)).fetchone()
+            if row is None:
+                raise ValueError("unknown forget request")
+            return int(row["revision"])
+
+    def complete_forget(self, conversation_id: str, *, revision: int | None = None) -> bool:
+        with self._connect() as db:
+            changed = db.execute(
+                "UPDATE forget_requests SET state='completed' WHERE conversation_id=? "
+                "AND (? IS NULL OR revision=?)", (conversation_id, revision, revision),
+            ).rowcount
+            if not changed:
+                return False
             db.execute("INSERT INTO settings(key,value) VALUES ('resume_needed','1') "
                        "ON CONFLICT(key) DO UPDATE SET value='1'")
+            return True
 
     def resume_needed(self) -> bool:
         with self._connect() as db:
