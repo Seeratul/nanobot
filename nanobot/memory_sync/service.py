@@ -7,7 +7,9 @@ import json
 from pathlib import Path
 
 import httpx
+from filelock import Timeout
 
+from nanobot.memory_sync.forget import ForgetWorker, SystemdWorkerControl
 from nanobot.memory_sync.outbox import MemoryOutbox
 from nanobot.memory_sync.profiles import ProfileExporter
 from nanobot.memory_sync.worker import HindsightWorker
@@ -17,7 +19,10 @@ async def run_delivery(worker: HindsightWorker, *, interval: float = 5) -> None:
     """Delivery failure must not disable the last valid profile files."""
     previous: str | None = None
     while True:
-        status = await worker.run_once()
+        try:
+            status = await worker.run_once()
+        except Timeout:
+            status = "busy"
         if status != previous:
             print(json.dumps({"component": "outbox", "status": status}), flush=True)
             previous = status
@@ -42,18 +47,34 @@ async def run_profiles(exporter: ProfileExporter, *, interval: float = 300) -> N
         await asyncio.sleep(interval)
 
 
+async def run_forget(forgetter: ForgetWorker, *, interval: float = 30) -> None:
+    previous: str | None = None
+    while True:
+        try:
+            status = await forgetter.run_once()
+        except Timeout:
+            status = "busy"
+        except (httpx.HTTPError, OSError, ValueError, RuntimeError):
+            status = "retry_pending"
+        if status != previous:
+            print(json.dumps({"component": "forget", "status": status}), flush=True)
+            previous = status
+        await asyncio.sleep(interval)
+
+
 async def serve(
     outbox_path: Path, api_url: str, bank_id: str, workspace: Path, profile_state: Path,
-    *, delivery_interval: float = 5, profile_interval: float = 300,
+    *, delivery_interval: float = 5, profile_interval: float = 300, pause_path: Path | None = None,
 ) -> None:
     if delivery_interval <= 0 or profile_interval <= 0:
         raise ValueError("service intervals must be positive")
     if not profile_state.is_file():
         raise ValueError("profile seeding and baseline registration must finish before service start")
-    worker = HindsightWorker(MemoryOutbox(outbox_path, bank_id=bank_id),
+    worker = HindsightWorker(MemoryOutbox(outbox_path, bank_id=bank_id, pause_path=pause_path),
                              api_url=api_url, bank_id=bank_id)
     exporter = ProfileExporter(worker, workspace, profile_state)
     async with asyncio.TaskGroup() as group:
+        group.create_task(run_forget(ForgetWorker(worker, exporter, SystemdWorkerControl(worker.outbox.pause_path))))
         group.create_task(run_delivery(worker, interval=delivery_interval))
         group.create_task(run_profiles(exporter, interval=profile_interval))
 
@@ -67,11 +88,13 @@ def main() -> None:
     parser.add_argument("--bank-id", default="personal")
     parser.add_argument("--workspace", required=True, type=Path)
     parser.add_argument("--profile-state", required=True, type=Path)
+    parser.add_argument("--pause-file", type=Path)
     parser.add_argument("--delivery-interval", type=float, default=5)
     parser.add_argument("--profile-interval", type=float, default=300)
     args = parser.parse_args()
     asyncio.run(serve(args.outbox, args.api_url, args.bank_id, args.workspace, args.profile_state,
-                      delivery_interval=args.delivery_interval, profile_interval=args.profile_interval))
+                      delivery_interval=args.delivery_interval, profile_interval=args.profile_interval,
+                      pause_path=args.pause_file))
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ from typing import cast
 from urllib.parse import quote
 
 import httpx
+from filelock import FileLock, Timeout
 
 from nanobot.memory_sync.worker import HindsightWorker
 from nanobot.security.network import PinnedDNSAsyncTransport, validate_url_target
@@ -85,7 +86,26 @@ class ProfileExporter:
             baseline[model_id] = {"content_hash": self._hash(content), "revision": None}
         self._write_atomic(self.state_path, json.dumps(baseline, sort_keys=True))
 
+    def invalidate(self) -> None:
+        # Without an LLM, there is no reliable semantic subtraction. Temporarily
+        # use empty profiles and regenerate from remaining evidence afterward.
+        state: dict[str, dict[str, str | None]] = {}
+        for model_id, filename in PROFILE_MODELS.items():
+            content = "# Soul\n" if model_id == "agent-soul" else "# User\n"
+            self._write_atomic(self.workspace / filename, content)
+            state[model_id] = {"content_hash": self._hash(content), "revision": None}
+        self._write_atomic(self.state_path, json.dumps(state, sort_keys=True))
+
     async def sync_once(self) -> dict[str, str]:
+        try:
+            with FileLock(self.worker.lock_path, timeout=0):
+                if self.worker.outbox.forget_pending():
+                    return {"status": "forget_pending"}
+                return await self._sync_unlocked()
+        except Timeout:
+            return {"status": "busy"}
+
+    async def _sync_unlocked(self) -> dict[str, str]:
         if not self.state_path.exists():
             raise ValueError("initial profile import and baseline registration are required")
         # Fail closed if state is malformed. Never fall back to overwriting files.

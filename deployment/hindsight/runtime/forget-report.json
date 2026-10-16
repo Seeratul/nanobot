@@ -1,0 +1,11 @@
+{
+  "no_new_privileges": true,
+  "operation_before_forget": "pending",
+  "child_before_forget": "processing",
+  "failure_kept_paused_and_profiles_cleared": true,
+  "fresh_worker_retry": "forgotten",
+  "reimport_blocked": true,
+  "document_absent_after_worker_restart": true,
+  "recall_results_after_delete": 0,
+  "synthetic_bank_removed": true
+}

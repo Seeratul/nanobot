@@ -36,8 +36,9 @@ class MemoryOutbox:
     the sanitized export, never a parallel copy of the entire original journal.
     """
 
-    def __init__(self, path: Path, *, bank_id: str = "personal"):
+    def __init__(self, path: Path, *, bank_id: str = "personal", pause_path: Path | None = None):
         self.path = path
+        self._pause_path = pause_path or path.with_suffix(".forget-pending")
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         # Precreate privately, before SQLite can choose a permissive file mode.
         fd = os.open(path, os.O_CREAT | os.O_WRONLY, 0o600)
@@ -61,12 +62,25 @@ class MemoryOutbox:
                     error_code TEXT,
                     FOREIGN KEY(conversation_id) REFERENCES conversations(id)
                 );
+                CREATE TABLE IF NOT EXISTS forget_requests (
+                    conversation_id TEXT PRIMARY KEY,
+                    state TEXT NOT NULL DEFAULT 'pending'
+                );
                 CREATE INDEX IF NOT EXISTS jobs_ready ON jobs(state, next_attempt_at);
             """)
             db.execute("INSERT OR IGNORE INTO settings(key,value) VALUES ('bank_id',?)", (bank_id,))
             stored = db.execute("SELECT value FROM settings WHERE key='bank_id'").fetchone()[0]
             if stored != bank_id:
                 raise ValueError("outbox bank changed; explicit migration required")
+            saved_pause = db.execute("SELECT value FROM settings WHERE key='pause_path'").fetchone()
+            if saved_pause is None:
+                self._pause_path = self._pause_path.resolve()
+                db.execute("INSERT INTO settings(key,value) VALUES ('pause_path',?)",
+                           (str(self._pause_path),))
+            elif pause_path is not None and str(pause_path.resolve()) != saved_pause["value"]:
+                raise ValueError("outbox pause signal changed; explicit migration required")
+            else:
+                self._pause_path = Path(saved_pause["value"])
 
     @contextmanager
     def _connect(self) -> Generator[sqlite3.Connection, None, None]:
@@ -75,6 +89,7 @@ class MemoryOutbox:
         try:
             db.execute("PRAGMA foreign_keys=ON")
             db.execute("PRAGMA synchronous=FULL")
+            db.execute("PRAGMA secure_delete=ON")
             db.execute("BEGIN IMMEDIATE")
             yield db
             db.commit()
@@ -148,9 +163,91 @@ class MemoryOutbox:
             )
             return document_id if content else None
 
+    def request_forget(self, document_id: str) -> str:
+        """Tombstone the whole source conversation before any remote deletion.
+
+        The pause file is written first so a crash cannot restart the remote
+        worker between a deletion request and its durable outbox transaction.
+        """
+        with self._connect() as db:
+            row = db.execute("SELECT conversation_id FROM jobs WHERE document_id=?",
+                             (document_id,)).fetchone()
+            if row is None:
+                raise ValueError("unknown source document; no deletion requested")
+            conversation_id = str(row["conversation_id"])
+            fd = os.open(self.pause_path, os.O_WRONLY | os.O_CREAT, 0o600)
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+            if os.name != "nt":
+                directory = os.open(self.pause_path.parent, os.O_RDONLY)
+                try:
+                    os.fsync(directory)
+                finally:
+                    os.close(directory)
+            db.execute("UPDATE conversations SET suppressed=1 WHERE id=?", (conversation_id,))
+            db.execute("UPDATE jobs SET state='suppressed', payload='', payload_hash='' "
+                       "WHERE conversation_id=?", (conversation_id,))
+            db.execute("INSERT INTO forget_requests(conversation_id) VALUES (?) "
+                       "ON CONFLICT(conversation_id) DO UPDATE SET state='pending'",
+                       (conversation_id,))
+            return conversation_id
+
+    @property
+    def pause_path(self) -> Path:
+        return self._pause_path
+
+    def forget_pending(self) -> bool:
+        # The marker also covers an interrupted request before its DB commit.
+        return self.pause_path.exists()
+
+    def next_forget(self) -> tuple[str, list[tuple[str, str]]] | None:
+        with self._connect() as db:
+            row = db.execute("SELECT conversation_id FROM forget_requests "
+                             "WHERE state='pending' ORDER BY rowid LIMIT 1").fetchone()
+            if row is None:
+                return None
+            conversation_id = str(row["conversation_id"])
+            receipts = [(str(job["document_id"]), str(job["operation_id"])) for job in db.execute(
+                "SELECT document_id, operation_id FROM jobs WHERE conversation_id=?",
+                (conversation_id,),
+            )]
+            return conversation_id, receipts
+
+    def complete_forget(self, conversation_id: str) -> None:
+        with self._connect() as db:
+            db.execute("UPDATE forget_requests SET state='completed' WHERE conversation_id=?",
+                       (conversation_id,))
+            db.execute("INSERT INTO settings(key,value) VALUES ('resume_needed','1') "
+                       "ON CONFLICT(key) DO UPDATE SET value='1'")
+
+    def resume_needed(self) -> bool:
+        with self._connect() as db:
+            row = db.execute("SELECT value FROM settings WHERE key='resume_needed'").fetchone()
+            return row is not None and row["value"] == "1"
+
+    def clear_resume(self) -> None:
+        with self._connect() as db:
+            db.execute("UPDATE settings SET value='0' WHERE key='resume_needed'")
+
+    def unpause_if_complete(self) -> bool:
+        with self._connect() as db:
+            row = db.execute("SELECT 1 FROM forget_requests WHERE state='pending'").fetchone()
+            if row is not None:
+                return False
+            # With no receipts at all, the marker can mean an interrupted
+            # request before commit. Fail closed until explicitly inspected.
+            if db.execute("SELECT 1 FROM forget_requests").fetchone() is None:
+                return False
+            self.pause_path.unlink(missing_ok=True)
+            return True
+
     def next_job(self, *, now: float | None = None) -> MemoryJob | None:
         """Return a due head job; needs-attention jobs block their session's tail."""
         with self._connect() as db:
+            if self.forget_pending():
+                return None
             row = db.execute("""
                 SELECT j.* FROM jobs j
                 JOIN conversations c ON c.id=j.conversation_id

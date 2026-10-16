@@ -383,6 +383,7 @@ class AgentLoop:
             self.memory_outbox = MemoryOutbox(
                 self.sessions.sessions_dir / "hindsight-outbox.sqlite3",
                 bank_id=hindsight_config.bank_id,
+                pause_path=Path(hindsight_config.pause_file) if hindsight_config.pause_file else None,
             )
             self.memory_exporter = SessionMemoryExporter(
                 self.memory_outbox, known_secrets=tuple(

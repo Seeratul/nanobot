@@ -88,3 +88,12 @@ completed live Hindsight migration.
 The 2026-10-16 Luna acceptance run used only fictional records. Eighteen focused
 service/worker/profile tests and ten subtests passed; Ruff and strict service
 typing passed. See luna-eval for measurements and precise test limits.
+
+## Current runtime status, 2026-10-16
+
+The dedicated native runtime is now installed and enabled. A source-conversation
+forget protocol passed an actual in-flight retain / HTTP-failure / restart test
+under NoNewPrivileges=true. Nanobot itself is not switched. See
+[runtime installation and test limits](runtime/README.md). Multi-round runtime
+recovery has also been fixed and validated; see [recovery validation](recovery-validation.md).
+Earlier pending items above describe the checkpoints before these later tests.

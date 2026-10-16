@@ -126,6 +126,7 @@ class HindsightConfig(Base):
     enabled: bool = False
     bank_id: str = Field(default="personal", pattern=r"^[A-Za-z0-9_-]+$")
     api_url: str = "http://127.0.0.1:8888"
+    pause_file: str | None = None
 
 
 class AgentDefaults(Base):
