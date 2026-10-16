@@ -401,6 +401,11 @@ async def test_native_compaction_uses_provider_request_boundary(
     async def observe_compaction(event: ContextCompactionEvent) -> None:
         compaction_events.append(event)
 
+    checkpoints = []
+
+    async def checkpoint(payload):
+        checkpoints.append({key: value for key, value in payload.items() if key != "provider_state"})
+
     result = await AgentRunner().run(make_run_spec(
         provider,
         initial_messages=None,
@@ -421,6 +426,7 @@ async def test_native_compaction_uses_provider_request_boundary(
         max_iterations=2,
         max_tool_result_chars=_MAX_TOOL_RESULT_CHARS,
         events=EventSink(observe_compaction),
+        checkpoint_callback=checkpoint,
     ))
 
     consolidate.assert_not_awaited()
@@ -439,6 +445,18 @@ async def test_native_compaction_uses_provider_request_boundary(
     assert {event.compaction_id for event in compaction_events} == {
         compaction_events[0].compaction_id
     }
+
+    from nanobot.session.manager import Session
+    from nanobot.session.recovery import restore_runtime_checkpoint
+
+    restored = Session(key="cli:native-restart", messages=[
+        {"role": "user", "content": "inspect the project"},
+    ], metadata={"runtime_checkpoint": checkpoints[-1]})
+    assert restore_runtime_checkpoint(restored)
+    assert [row["content"] for row in restored.messages] == [
+        "inspect the project", "", "complete tool result", "done",
+    ]
+    assert restored.messages[1]["tool_calls"][0]["id"] == "call-1"
 
 
 async def test_runner_keeps_current_tool_exchange_outside_summary(monkeypatch):

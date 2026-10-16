@@ -2532,3 +2532,88 @@ def test_save_turn_drops_duplicate_tool_result_ids() -> None:
 
     assert [m["role"] for m in session.messages] == ["assistant", "tool"]
     assert session.messages[1]["content"] == "first"
+
+
+def test_checkpoint_with_incomplete_prior_round_cannot_continue():
+    from nanobot.session.recovery import _runtime_checkpoint_is_well_formed
+
+    session = Session(key="cli:corrupt", provider_state=_provider_state())
+    checkpoint = {
+        "phase": "final_response",
+        "assistant_message": {"role": "assistant", "content": "done"},
+        "completed_tool_results": [],
+        "pending_tool_calls": [],
+        "provider_state_checkpoint_version": "v1",
+        "prior_messages": [{
+            "role": "assistant", "content": "working",
+            "tool_calls": [{"id": "lost", "function": {"name": "exec", "arguments": "{}"}}],
+        }],
+    }
+    assert not _runtime_checkpoint_is_well_formed(checkpoint)
+    session.metadata[RUNTIME_CHECKPOINT_KEY] = checkpoint
+    assert restore_runtime_checkpoint(session)
+    assert session.provider_state is None
+    assert [row["content"] for row in session.messages] == ["done"]
+
+
+@pytest.mark.parametrize("prior", [
+    [{"role": []}],
+    [{"role": "tool", "tool_call_id": "orphan", "content": "result"}],
+    [{"role": "system", "content": "not a turn delta"}],
+])
+def test_checkpoint_rejects_malformed_prior_messages(prior):
+    from nanobot.session.recovery import _runtime_checkpoint_is_well_formed
+
+    assert not _runtime_checkpoint_is_well_formed({"prior_messages": prior})
+
+
+def test_restore_checkpoint_dedupes_already_saved_prior_round():
+    assistant = {"role": "assistant", "content": "working", "tool_calls": [{
+        "id": "one", "function": {"name": "read_file", "arguments": "{}"},
+    }]}
+    result = {"role": "tool", "tool_call_id": "one", "content": "result"}
+    session = Session(key="cli:overlap", messages=[
+        {"role": "user", "content": "question"}, assistant, result,
+    ])
+    session.metadata[RUNTIME_CHECKPOINT_KEY] = {
+        "phase": "final_response",
+        "prior_messages": [assistant, result],
+        "assistant_message": {"role": "assistant", "content": "done"},
+        "completed_tool_results": [],
+        "pending_tool_calls": [],
+    }
+    assert restore_runtime_checkpoint(session)
+    assert [row["content"] for row in session.messages] == [
+        "question", "working", "result", "done",
+    ]
+
+
+def test_checkpoint_acknowledges_restored_followup_and_preserves_context_marker():
+    from nanobot.runtime_context import (
+        RUNTIME_CONTEXT_HISTORY_META,
+        public_history_message,
+    )
+    from nanobot.session.recovery import PENDING_FOLLOWUP_ID_KEY, PENDING_FOLLOWUPS_KEY
+
+    session = Session(key="cli:followup", metadata={PENDING_FOLLOWUPS_KEY: [
+        {"id": "consumed"}, {"id": "still-queued"},
+    ]})
+    session.metadata[RUNTIME_CHECKPOINT_KEY] = {
+        "phase": "final_response",
+        "assistant_message": {"role": "assistant", "content": "done"},
+        "completed_tool_results": [],
+        "pending_tool_calls": [],
+        "prior_messages": [
+            {"role": "assistant", "content": "first answer"},
+            {"role": "user", "content": "followup\n\nprivate context",
+             PENDING_FOLLOWUP_ID_KEY: ["consumed"],
+             "_meta": {"runtime_context": {"version": 1, "suffix": "private context"}}},
+        ],
+    }
+    assert restore_runtime_checkpoint(session)
+    assert session.metadata[PENDING_FOLLOWUPS_KEY] == [{"id": "still-queued"}]
+    user = session.messages[1]
+    assert PENDING_FOLLOWUP_ID_KEY not in user
+    assert "_meta" not in user
+    assert RUNTIME_CONTEXT_HISTORY_META in user
+    assert public_history_message(user)["content"] == "followup"

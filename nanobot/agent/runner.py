@@ -7,7 +7,7 @@ import inspect
 import time
 from collections.abc import Awaitable, Callable, Iterable
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, cast
 
@@ -308,6 +308,17 @@ class AgentRunner:
     async def run(self, spec: AgentRunSpec) -> AgentRunResult:
         hook = spec.hook or AgentHook()
         messages, compaction = self._initial_transcript_and_compaction(spec)
+        # Keep only this run's delta in the existing checkpoint. The raw
+        # transcript survives provider compaction, unlike model request messages.
+        checkpoint_start = len(messages)
+        checkpoint_callback = spec.checkpoint_callback
+        if checkpoint_callback is not None:
+            async def checkpoint_with_history(payload: dict[str, Any]) -> None:
+                current_size = 1 + len(payload.get("completed_tool_results", []))
+                prior = messages[checkpoint_start:len(messages) - current_size]
+                await checkpoint_callback({**payload, "prior_messages": deepcopy(prior)})
+
+            spec = replace(spec, checkpoint_callback=checkpoint_with_history)
         context = AgentRunHookContext(messages=deepcopy(messages))
         llm_usage_source_token = bind_llm_usage_source(
             spec.llm_usage_source or source_from_session_key(spec.session_key)

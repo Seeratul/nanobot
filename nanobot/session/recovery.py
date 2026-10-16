@@ -24,6 +24,7 @@ from nanobot.bus.outbound_events import (
     outbound_message_for_event,
 )
 from nanobot.bus.queue import MessageBus
+from nanobot.runtime_context import RUNTIME_CONTEXT_HISTORY_META, RUNTIME_CONTEXT_MESSAGE_META
 from nanobot.session import turn_continuation
 from nanobot.session.keys import UNIFIED_SESSION_KEY, last_channel_from_metadata
 from nanobot.session.manager import Session, SessionManager
@@ -211,6 +212,39 @@ def _checkpoint_tool_call_ids(
     return ids if len(ids) == len(set(ids)) else None
 
 
+def _checkpoint_prior_messages(value: object) -> list[dict[str, Any]] | None:
+    """Accept only complete preceding rounds; legacy checkpoints have none."""
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        return None
+    rows: list[dict[str, Any]] = []
+    pending: set[str] = set()
+    seen: set[str] = set()
+    for raw in cast(list[object], value):
+        if not isinstance(raw, dict):
+            return None
+        row = cast(dict[str, Any], raw)
+        role = row.get("role")
+        if role == "tool":
+            result_ids = _checkpoint_tool_call_ids([row], result_rows=True)
+            if result_ids is None or result_ids[0] not in pending:
+                return None
+            pending.remove(result_ids[0])
+        elif (role == "assistant" or role == "user") and not pending:
+            if role == "assistant":
+                calls = cast(object, row.get("tool_calls"))
+                ids = [] if calls is None else _checkpoint_tool_call_ids(calls)
+                if ids is None or seen.intersection(ids):
+                    return None
+                pending.update(ids)
+                seen.update(ids)
+        else:
+            return None
+        rows.append(row)
+    return None if pending else rows
+
+
 def _runtime_checkpoint_is_well_formed(checkpoint: Mapping[str, Any]) -> bool:
     """Return whether a checkpoint is safe to offer for continuation.
 
@@ -218,6 +252,8 @@ def _runtime_checkpoint_is_well_formed(checkpoint: Mapping[str, Any]) -> bool:
     Continue is stricter: silently dropping a malformed tool result could make
     the model repeat an external side effect.
     """
+    if _checkpoint_prior_messages(cast(object, checkpoint.get("prior_messages"))) is None:
+        return False
     assistant_value = cast(object, checkpoint.get("assistant_message"))
     if not isinstance(assistant_value, dict):
         return False
@@ -290,7 +326,26 @@ def restore_runtime_checkpoint(session: Session) -> bool:
     completed = cast(list[object], completed_value) if isinstance(completed_value, list) else []
     pending = cast(list[object], pending_value) if isinstance(pending_value, list) else []
 
+    prior = _checkpoint_prior_messages(cast(object, data.get("prior_messages")))
     restored: list[dict[str, Any]] = []
+    restored_followup_ids: set[str] = set()
+    for message in prior or []:
+        row = dict(message)
+        followup_id = cast(object, row.pop(PENDING_FOLLOWUP_ID_KEY, None))
+        if row.get("role") == "user":
+            if isinstance(followup_id, str):
+                restored_followup_ids.add(followup_id)
+            elif isinstance(followup_id, list):
+                restored_followup_ids.update(
+                    item for item in cast(list[object], followup_id) if isinstance(item, str)
+                )
+            internal = cast(object, row.pop("_meta", None))
+            if isinstance(internal, dict):
+                marker = cast(dict[str, Any], internal).get(RUNTIME_CONTEXT_MESSAGE_META)
+                if isinstance(marker, dict):
+                    row[RUNTIME_CONTEXT_HISTORY_META] = marker
+        row.setdefault("timestamp", datetime.now().isoformat())
+        restored.append(row)
     if isinstance(assistant, dict):
         assistant_row = cast(dict[str, Any], assistant)
     else:
@@ -342,6 +397,7 @@ def restore_runtime_checkpoint(session: Session) -> bool:
             overlap = size
             break
     session.messages.extend(restored[overlap:])
+    acknowledge_pending_followups(session, restored_followup_ids)
 
     assistant_data = cast(dict[str, Any], assistant) if isinstance(assistant, dict) else None
     synchronized = (
@@ -362,7 +418,7 @@ def restore_runtime_checkpoint(session: Session) -> bool:
         and assistant_data.get("role") == "assistant"
         and not data.get("pending_tool_calls")
     )
-    if not (synchronized and (exact_final or exact_tools)):
+    if not (prior is not None and synchronized and (exact_final or exact_tools)):
         session.provider_state = None
 
     session.metadata.pop(PENDING_USER_TURN_KEY, None)

@@ -1235,3 +1235,82 @@ async def test_runner_passes_reasoning_effort_to_provider():
     ))
 
     assert captured["reasoning_effort"] == "high"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("crash_phase", ["awaiting_tools", "tools_completed", "final_response"])
+@pytest.mark.parametrize("with_followup", [False, True])
+async def test_restart_restores_all_tool_rounds_without_reexecuting(
+    tmp_path, crash_phase, with_followup,
+):
+    from nanobot.agent.runner import AgentRunner
+    from nanobot.session.manager import SessionManager
+    from nanobot.session.recovery import restore_runtime_checkpoint
+
+    provider = MagicMock(spec=LLMProvider)
+    provider.chat_stream_with_retry = AsyncMock(side_effect=[
+        LLMResponse(content="first", tool_calls=[
+            ToolCallRequest(id="one", name="list_dir", arguments={"path": "."}),
+        ]),
+        LLMResponse(content="second", tool_calls=[
+            ToolCallRequest(id="two", name="list_dir", arguments={"path": "."}),
+        ]),
+        LLMResponse(content="done"),
+    ])
+    tools = MagicMock()
+    tools.get_definitions.return_value = []
+    tools.execute = AsyncMock(side_effect=["first result", "second result"])
+    manager = SessionManager(tmp_path)
+    session = manager.get_or_create("cli:restart")
+    session.add_message("user", "do task")
+    manager.save(session)
+
+    injections = [[{"role": "user", "content": "followup"}]] if with_followup else []
+
+    async def inject():
+        return injections.pop(0) if injections else []
+
+    class SimulatedCrashError(Exception):
+        pass
+
+    async def checkpoint(payload):
+        public = {key: value for key, value in payload.items() if key != "provider_state"}
+        session.metadata["runtime_checkpoint"] = public
+        manager.save_runtime_checkpoint(session)
+        if payload["phase"] == crash_phase and (
+            crash_phase == "final_response" or payload["iteration"] == 1
+        ):
+            raise SimulatedCrashError
+
+    with pytest.raises(SimulatedCrashError):
+        await AgentRunner().run(make_run_spec(
+            provider,
+            initial_messages=[{"role": "user", "content": "do task"}],
+            tools=tools,
+            model="test-model",
+            max_iterations=3,
+            max_tool_result_chars=_MAX_TOOL_RESULT_CHARS,
+            checkpoint_callback=checkpoint,
+            injection_callback=inject,
+        ))
+
+    # Reload from disk, including the sidecar rather than the live object.
+    restored = SessionManager(tmp_path).get_or_create(session.key)
+    assert restore_runtime_checkpoint(restored)
+    prefix = ["do task", "first", "first result"]
+    if with_followup:
+        prefix.append("followup")
+    prefix.append("second")
+    assert [row["content"] for row in restored.messages[:len(prefix)]] == prefix
+    second = restored.messages[len(prefix)]
+    if crash_phase == "awaiting_tools":
+        assert second["_recovery_interrupted"] is True
+        assert tools.execute.await_count == 1
+    else:
+        assert second["content"] == "second result"
+        assert tools.execute.await_count == 2
+    if crash_phase == "final_response":
+        assert restored.messages[-1]["content"] == "done"
+    before = list(restored.messages)
+    assert not restore_runtime_checkpoint(restored)
+    assert restored.messages == before
