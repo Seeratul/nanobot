@@ -1,0 +1,13 @@
+[Unit]
+Description=Resume Hindsight import at the authorized evening deadline
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/hindsight/maintenance/resume_scheduled_import.py
+NoNewPrivileges=true
+UMask=0077
+TimeoutStartSec=180
+StandardOutput=journal
+StandardError=null

@@ -421,3 +421,36 @@ The unit exited cleanly. Six threads, the eight slots/shared pool, and API HTTP
 200 were verified after restoration. Nanobot is active; the worker and importer
 remain stopped. No benchmark or Codex monitoring loop remains running. The
 sanitized full measurement is in thread-comparison-report.json.
+
+## Pi-local evening resume trigger, 2026-10-17
+
+Felix requested the chosen batch eight / six-thread configuration to remain and
+the import to resume automatically at 21:00 Europe/Berlin, with the Pi available
+for other work before then. The existing installer/helper defaults and live unit
+already persist both six-thread settings and eight text slots/batches.
+
+The enabled native hindsight-scheduled-import.timer is a single dated calendar
+event: 2026-10-17 21:00:00 Europe/Berlin (19:00 UTC). It uses Persistent=true,
+AccuracySec=1s and no randomized delay. It runs directly on the Pi and does not
+require Codex, the Windows PC, or a recurring AI automation. If the Pi is off at
+the deadline, normal persistent-timer catch-up runs when the Pi is available.
+
+The importer, worker, API and embedding services were all stopped. A root-owned
+scheduled-import.hold marker and per-service ConditionPathExists drop-ins prevent
+those enabled services, including the worker gate, from starting before the
+scheduled resumption after a reboot. The PostgreSQL service and production
+Nanobot are untouched. The check reported all four pipeline services inactive,
+Nanobot active, and about 3,023 MiB available RAM after stopping the model/API.
+
+The scheduled oneshot verifies the absolute local deadline and refuses to resume
+while targeted fact retirement is pending. It removes the hold durably, then
+starts embedding, API, worker and importer in order, preserving their existing
+hardening and forget gate. It checks nonzero service PIDs and emits only generic
+status counters. Its NoNewPrivileges setting is enabled. It does not report the
+import complete merely because services have started.
+
+systemd-analyze calendar/verify, Ruff on both scripts, the live --check mode,
+loaded enabled timer and next firing time were checked. The observed timer state
+was active with next elapse 2026-10-17 21:00:00 CEST, no prior trigger. The dry
+check confirmed deadline_reached=false, hold_present=true, forget_pending=false.
+The future job was not run early. No Codex monitoring loop remains active.
