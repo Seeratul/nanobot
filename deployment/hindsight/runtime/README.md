@@ -377,3 +377,47 @@ unchanged. Both installer and batch configuration helper preserve this choice.
 The history importer and Hindsight worker remain stopped. A short batch smoke
 test uses exactly the eight synthetic inputs from the previous batching check;
 its one-shot timing is not a representative full-import benchmark.
+
+## Repeated real-fact thread comparison, 2026-10-17
+
+The longer comparison uses 32 unique stored world/experience fact texts, selected
+at evenly spaced length ranks among eligible 80-600-character facts. The chosen
+texts are frozen in process RAM and never copied to the repository or journal.
+The workload contains 2,470 input tokens per run including BOS, in four batches
+of eight. This is an embedding-only test of real fact text; it excludes native
+date/entity augmentation, Luna extraction, consolidation and database writes.
+
+The run order is 2, 6, 6, 2 threads, with both --threads and --threads-batch set
+together. Every run starts a fresh embedding process and performs the same
+synthetic warm-up outside its timed section. All context, batch, model and slot
+settings remain fixed. Both cases run twice with identical input order. The
+controller checks dimensions, indices, finite vectors, exact input token usage
+and cosine similarity against the first run, without exporting vectors.
+
+CPU and memory counters come from /proc, thermal_zone0 is sampled each second,
+and vcgencmd throttle flags are captured around every run. The report records
+whole-system and embedding-process CPU use separately, available RAM, process
+peak RSS including warm-up, and swap-in/out page deltas. Nanobot remains running;
+external activity can affect timings. Two repetitions per case are an observed
+comparison, not a general performance guarantee.
+
+The dedicated bounded transient benchmark unit runs only while importer and
+worker are stopped. Its finally handler and root-owned ExecStopPost helper both
+restore six threads and the API, including on failure/timeout. It does not start
+the worker or importer. Private counter reports are written atomically under
+/var/lib/hindsight/benchmarks; the public report excludes the dataset hash.
+
+
+The ABBA comparison completed successfully. Two threads took 224.838 and
+225.538 seconds (mean 225.188); six took 127.517 and 128.881 (mean 128.199).
+With identical workloads, six threads used 43.07% less embedding wall time,
+about 1.757x throughput in this test. Whole-system busy CPU averaged about 53%
+with two threads and 98% with six. Maximum recorded temperature was 63.783 C;
+all throttle flags remained zero, minimum available RAM was 1722.9 MiB and no
+swap-out pages were recorded during the timed sections. All vector/index/token
+checks passed. This does not imply the entire Luna/database import is 43% faster.
+
+The unit exited cleanly. Six threads, the eight slots/shared pool, and API HTTP
+200 were verified after restoration. Nanobot is active; the worker and importer
+remain stopped. No benchmark or Codex monitoring loop remains running. The
+sanitized full measurement is in thread-comparison-report.json.
