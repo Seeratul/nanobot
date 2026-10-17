@@ -1,0 +1,1 @@
+{"threads":6,"threads_batch":6,"physical_cpu_cores":4,"batch_size":8,"passed":true,"same_short_batch_seconds":8.011,"previous_threads2_batch_seconds":10.352,"dimensions":1024,"input_tokens":116,"import_resumed":false,"representative_production_benchmark":false}

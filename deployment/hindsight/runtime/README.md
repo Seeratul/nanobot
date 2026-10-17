@@ -367,3 +367,13 @@ indices and all 2,221 input tokens including per-sequence BOS, in 280.693 second
 The import and worker remain explicitly paused. The API and embedding service
 are restored; Nanobot remains active. This change does not claim a throughput
 gain: the measured single short comparison was approximately equal in speed.
+
+## Six CPU threads, 2026-10-17
+
+At Felix's request, Qwen now uses `--threads 6 --threads-batch 6`. The Pi reports
+four online CPU cores; these are six software threads scheduled on four cores.
+The eight-text batches, eight slots and bounded shared KV configuration remain
+unchanged. Both installer and batch configuration helper preserve this choice.
+The history importer and Hindsight worker remain stopped. A short batch smoke
+test uses exactly the eight synthetic inputs from the previous batching check;
+its one-shot timing is not a representative full-import benchmark.
