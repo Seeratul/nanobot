@@ -2,8 +2,7 @@
 
 The native stack is installed under /opt/hindsight and /var/lib/hindsight. The
 production Nanobot package, config, SOUL.md, USER.md and conversations are unchanged.
-The new Hindsight database contains no real conversation/profile imports. All
-acceptance data was fictional and its test bank was removed.
+The real SOUL.md and USER.md baselines have been imported. Historical import preparation and current progress are documented below. Earlier acceptance banks contained fictional data and were removed.
 
 ## Installed services
 
@@ -242,3 +241,85 @@ enabled. Existing MEMORY.md and historical conversations were not imported in
 this step. Next activation work is Dream runtime removal, permanent package and
 memory-sync installation, guarded MCP configuration and the controlled Nanobot
 switch. Long mixed/code embedding inputs must pass before historical import.
+
+## Initial history import, 2026-10-17
+
+Import precedes production activation. The initial snapshot contains 17 archived
+conversations and one legacy MEMORY.md; 10 Dream journals are excluded. Original
+source archives, SOUL.md and USER.md are never written by the importer. Provider
+state, hidden automation and memory-tool echoes are excluded using the existing
+export adapter. Credential patterns and configured secret values are redacted
+locally. The sanitized plan contains 3,400 nonempty exported messages and
+9,844,286 characters; it is deleted after the real outbox owns all submissions.
+This transient submission plan and outbox support delivery, not backups.
+
+Native chunking produces 4,786 chunks of at most 3,000 characters. Every chunk
+was measured with the actual Qwen tokenizer: 3,304,313 tokens in total, median
+789, p95 1,177, maximum 2,120. The native cap tokenizer's maximum was 1,786,
+below Hindsight's 8,192-token truncation cap. No legacy execution-record migration
+was needed in the 17 source sessions.
+
+The previous 2,048-token context rejected the largest actual chunks. The dedicated
+embedding service now uses a 4,096-token context, preserving two threads and the
+1,024-token batch settings. Long inputs are measured separately with enough time
+for the Pi. The import gate requires successful 1,024-dimensional embeddings,
+reported usage matching full input lengths, a matching plan hash, and each test
+under the native embedding client's 600-second timeout. Failed acceptance cannot
+queue historical sources.
+
+`hindsight-history-import.service` uses a separate root-owned source copy under
+/opt/hindsight/nanobot-import and the maintenance script under
+/opt/hindsight/maintenance. Its runtime does not depend on /tmp. It runs as
+nanobot with NoNewPrivileges=true, private umask and reduced CPU priority. It uses
+the existing private outbox and bank personal, with deterministic document and
+operation IDs. Known quota/transport errors keep jobs queued through the existing
+worker's backoff; there is no paid provider fallback. Unknown failures stop for
+attention. Restarting the unit resumes the manifest instead of duplicating data.
+
+Nine focused tests cover matching acceptance, rejection of slow/mismatched
+acceptance, lost enqueue acknowledgements, source conflicts, pending forgets,
+suppressed source protection, unchanged local profiles, and recall of duplicate
+facts. Completion verification checks all expected remote documents, native
+operation completion, fact listings and an index round trip per source with
+facts. Identical facts retrieved from another source are counted separately.
+This checks storage/index accessibility and does not prove semantic fidelity.
+
+Operational commands: `sudo systemctl status hindsight-history-import` and
+`sudo journalctl -u hindsight-history-import -o cat --no-pager`. The safe
+history_import_progress.py helper emits only counts and phase progress. After
+completion, inspect the private manifest's aggregate verification report before
+production handover. Chat activity and Dream may continue during the snapshot
+import; check for newer evidence and profile changes before activating the new
+Nanobot package and profile projection. No production activation is performed
+by this import service.
+
+The full-input acceptance passed with the expanded context: the largest real
+chunk (2,120 tokenizer tokens) returned all 2,121 input tokens including BOS,
+1,024 dimensions and HTTP 200 in 279.115 seconds. The mixed Unicode case returned
+all 2,280 input tokens, 1,024 dimensions and HTTP 200 in 303.295 seconds. This is a
+measured throughput limit on this Pi, not a guarantee for every future input.
+
+The historical import started on 2026-10-17 at 13:27:46 CEST. All 18 source
+submissions were durably queued; the temporary sanitized plan was removed after
+queue ownership transferred. The import service is enabled and runs independently
+of Codex. Production Nanobot and local profile projection remain unchanged.
+
+The 3,304,313 tokenizer tokens above describe the source-chunk safety inventory,
+not the actual embedding workload. In concise extraction mode the native retain
+pipeline embeds date/entity-augmented extracted facts; it stores the source
+chunks as evidence. Do not estimate total import duration by assuming that all
+raw source tokens are embedded. Use measured fact/chunk progress and allow for
+later consolidation and saved-model refresh work.
+The first observation ended at 13:33:08 CEST after approximately 320 seconds:
+three of 18 sources completed, ten native chunks stored, and 19 new facts.
+All dedicated services and unchanged production Nanobot were active. There was
+about 1,505 MiB available RAM and swap use remained about 498 MiB. No unknown
+job failures were observed. This is an early snapshot, not completion evidence.
+
+Ten chunks in 320 seconds linearly project to about 43 hours for the 4,786 source
+chunks. The reported rough remaining ETA is two to four days including allowance
+for consolidation and model refresh, with low confidence: the first sources are
+small and not representative of all technical chats. Quota pauses can extend it.
+The user requested only a five-minute observation, then an ETA and an end to the
+Codex monitoring loop. Monitoring has ended; the enabled import service continues
+independently. See history-import-report.json for the sanitized measured snapshot.

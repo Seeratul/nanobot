@@ -1,0 +1,158 @@
+{
+  "at": "2026-10-17T11:33:08.081784+00:00",
+  "embedding_acceptance": {
+    "native_chunks": 4786,
+    "max_chunk_chars": 3000,
+    "max_actual_tokens": 2120,
+    "actual_chunks_over_1023_tokens": 665,
+    "embedding_cases": [
+      {
+        "case": "actual_chunk_rank_0",
+        "chars": 2996,
+        "tokens": 2120,
+        "http_status": 200,
+        "seconds": 279.115,
+        "dimensions": 1024,
+        "reported_input_tokens": 2121
+      },
+      {
+        "case": "unicode",
+        "chars": 3000,
+        "tokens": 2279,
+        "http_status": 200,
+        "seconds": 303.295,
+        "dimensions": 1024,
+        "reported_input_tokens": 2280
+      }
+    ],
+    "passed": true
+  },
+  "import_snapshot": {
+    "version": 1,
+    "stage": "delivering",
+    "source_count": 18,
+    "skipped": {
+      "dream": 10
+    },
+    "exported_chars": 9844286,
+    "snapshot_prepared_at": "2026-10-17T11:07:35.602745+00:00"
+  },
+  "jobs": {
+    "completed": 3,
+    "pending": 12,
+    "submitted": 3
+  },
+  "temporary_submission_plan_removed": true,
+  "source_chunk_token_inventory_total": 3304313,
+  "observation": {
+    "at": "2026-10-17T11:33:07.760479+00:00",
+    "stage": "delivering",
+    "outbox": {
+      "completed": 3,
+      "submitted": 3,
+      "pending": 12
+    },
+    "elapsed_seconds": 320.2,
+    "documents": 5,
+    "facts_by_type": {
+      "experience": 3,
+      "observation": 12,
+      "world": 28
+    },
+    "native_operations": {
+      "completed": 13,
+      "pending": 6,
+      "processing": 1
+    },
+    "operation_progress": [
+      {
+        "status": "completed",
+        "type": "batch_retain"
+      },
+      {
+        "status": "completed",
+        "type": "retain",
+        "progress": {
+          "stage": "storing",
+          "processed": 4,
+          "total": 4,
+          "detail": {
+            "facts_committed": 12
+          }
+        }
+      },
+      {
+        "status": "completed",
+        "type": "batch_retain"
+      },
+      {
+        "status": "completed",
+        "type": "retain",
+        "progress": {
+          "stage": "storing",
+          "processed": 1,
+          "total": 1,
+          "detail": {
+            "facts_committed": 2
+          }
+        }
+      },
+      {
+        "status": "completed",
+        "type": "batch_retain"
+      },
+      {
+        "status": "completed",
+        "type": "retain",
+        "progress": {
+          "stage": "storing",
+          "processed": 5,
+          "total": 5,
+          "detail": {
+            "facts_committed": 5
+          }
+        }
+      },
+      {
+        "status": "pending",
+        "type": "batch_retain"
+      },
+      {
+        "status": "processing",
+        "type": "retain"
+      },
+      {
+        "status": "pending",
+        "type": "batch_retain"
+      },
+      {
+        "status": "pending",
+        "type": "retain"
+      },
+      {
+        "status": "pending",
+        "type": "batch_retain"
+      },
+      {
+        "status": "pending",
+        "type": "retain"
+      }
+    ]
+  },
+  "eta": {
+    "estimated_remaining_days": [
+      2,
+      4
+    ],
+    "confidence": "low; first three sources and ten chunks only",
+    "observed_completed_sources": 3,
+    "observed_completed_source_chunks": 10,
+    "source_chunks_total": 4786,
+    "observed_new_facts": 19,
+    "linear_retain_projection_hours": 42.6,
+    "includes_allowance_for_consolidation": true,
+    "quota_pauses_can_extend": true,
+    "automatic_completion_not_claimed": true,
+    "observation_stopped_at": "2026-10-17T11:33:07.760479+00:00"
+  }
+}

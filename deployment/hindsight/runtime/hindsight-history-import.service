@@ -1,0 +1,23 @@
+[Unit]
+Description=Initial Nanobot historical memory import
+After=network-online.target hindsight-api.service hindsight-worker.service
+Wants=network-online.target hindsight-api.service hindsight-worker.service
+
+[Service]
+Type=exec
+User=nanobot
+Group=nanobot
+WorkingDirectory=/opt/hindsight/maintenance
+Environment=PYTHONPATH=/opt/hindsight/nanobot-import
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/home/nanobot/.local/share/nanobot/venv/bin/python /opt/hindsight/maintenance/import_history.py
+NoNewPrivileges=true
+UMask=0077
+Restart=on-abnormal
+RestartSec=60
+Nice=10
+StandardOutput=journal
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target
