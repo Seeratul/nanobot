@@ -1,0 +1,16 @@
+{
+  "profiles_imported": 2,
+  "source_documents": 2,
+  "stored_facts_by_type": {
+    "observation": 12,
+    "world": 12
+  },
+  "local_originals_unchanged": true,
+  "backups_created": false,
+  "projection_activated": false,
+  "consistency_passed": true,
+  "automatic_review_is_not_semantic_proof": true,
+  "no_pending_operations_at_final_check": true,
+  "no_new_privileges": true,
+  "review_note": "Combined-file comparison and focused review resolved paraphrased introduction statements; no unsupported or contradictory generated claims remained."
+}

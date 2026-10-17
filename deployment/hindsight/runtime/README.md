@@ -90,7 +90,7 @@ real acceptance test with the protection enabled. No rejected change was applied
 ## Remaining activation work
 
 Selective forgetting is chosen and implemented at the queue/worker boundary.
-Finish real profile bootstrap, memory-sync unit activation, MCP
+Finish memory-sync unit activation, MCP
 client configuration, Dream runtime removal and controlled Nanobot
 switch. Test long mixed/code inputs against the embedding context limit before
 history import. The current standalone runtime is ready; the Nanobot memory
@@ -188,3 +188,57 @@ services and the unchanged production Nanobot remained active. See
 memory-tool-report.json and real_memory_tool_test.py. After the final prompt
 change, 84 focused context/agent tests and Ruff passed; both changed modules were
 rechecked with strict typing.
+
+
+## Existing profile bootstrap, 2026-10-16
+
+`python -m nanobot.memory_sync.bootstrap` imports the existing SOUL.md and USER.md
+as explicitly user-authorized initial baselines. It uses the same private outbox
+and bank as the future delivery service. Required arguments are --workspace,
+--outbox, --manifest, --profile-state and --pause-file; --bank-id defaults to
+personal and --api-url to the loopback API. Parent state directories must exist.
+
+The manifest stores hashes and deterministic source identities, not backup
+copies. Source changes, possible credentials, unrelated bank documents, malformed
+models and failed generation stop the bootstrap. Lost acknowledgements resume
+through the existing operation UUIDs. A nonempty generated model is required;
+creation timestamps alone cannot make the import ready. The importer rechecks
+sources before registering the projection baseline. It does not write SOUL.md or
+USER.md and does not start automatic projection.
+
+70 memory tests and 10 subtests passed, including bootstrap restart/idempotence,
+changed sources, foreign source refusal, credential-pattern refusal and models
+that have timestamps without content. Ruff and strict checking of all three
+changed production modules passed. Real profile inputs were additionally tested
+against local Qwen: 362/301 tokenizer tokens, 1024 output dimensions, and reported
+embedding input usage of 363/302 tokens. This validates these initial profiles;
+long mixed/code history inputs still need separate coverage before history import.
+
+The live bootstrap runs as nanobot in a transient systemd unit with
+NoNewPrivileges=true, using the isolated verified source tree. Its outbox and
+state live in the existing workspace session directory. Production Nanobot
+package/configuration and automatic projection remain unchanged until the
+controlled switch; Dream must be disabled before projection is activated.
+
+
+The real bootstrap completed successfully under NoNewPrivileges=true: two source
+profiles, twelve world facts and twelve derived observations, with both saved
+Mental Models generated. Existing local profile contents still match the imported
+baseline hashes. No original profile was overwritten, no backup was created, and
+no operations remained pending at the final check. Production Nanobot and all
+dedicated Hindsight services remained active. See profile-import-report.json.
+
+Review compared the combined SOUL.md + USER.md context, because both files load
+in every conversation and valid information may move between them. The initial
+per-file check incorrectly reported such moves as losses/additions. The combined
+check found no unsupported additions or contradictions, but flagged two intro
+statements; a focused source comparison confirmed their meanings were already
+present. The private review records those raw flags, their resolution and the
+reviewed model hashes. The public report contains aggregate counts/booleans only.
+This automated review is not a mathematical proof of semantic fidelity.
+
+The baseline/projection state is now registered but automatic projection is NOT
+enabled. Existing MEMORY.md and historical conversations were not imported in
+this step. Next activation work is Dream runtime removal, permanent package and
+memory-sync installation, guarded MCP configuration and the controlled Nanobot
+switch. Long mixed/code embedding inputs must pass before historical import.

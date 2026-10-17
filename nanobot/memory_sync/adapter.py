@@ -27,6 +27,11 @@ _SECRET = re.compile(
 )
 
 
+def contains_potential_credentials(text: str) -> bool:
+    """Conservative credential-pattern check at the memory export boundary."""
+    return _SECRET.search(text) is not None
+
+
 def _objects(value: object) -> list[dict[str, Any]]:
     """Normalize JSON-shaped lists at the persisted-message boundary."""
     if not isinstance(value, list):

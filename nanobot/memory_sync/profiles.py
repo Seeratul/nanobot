@@ -56,7 +56,7 @@ class ProfileExporter:
         return hashlib.sha256(content.encode()).hexdigest()
 
     @staticmethod
-    def _write_atomic(path: Path, text: str) -> None:
+    def write_atomic(path: Path, text: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         temp = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
         try:
@@ -84,7 +84,7 @@ class ProfileExporter:
             path = self.workspace / filename
             content = path.read_text(encoding="utf-8") if path.exists() else ""
             baseline[model_id] = {"content_hash": self._hash(content), "revision": None}
-        self._write_atomic(self.state_path, json.dumps(baseline, sort_keys=True))
+        self.write_atomic(self.state_path, json.dumps(baseline, sort_keys=True))
 
     def invalidate(self) -> None:
         # Without an LLM, there is no reliable semantic subtraction. Temporarily
@@ -92,9 +92,9 @@ class ProfileExporter:
         state: dict[str, dict[str, str | None]] = {}
         for model_id, filename in PROFILE_MODELS.items():
             content = "# Soul\n" if model_id == "agent-soul" else "# User\n"
-            self._write_atomic(self.workspace / filename, content)
+            self.write_atomic(self.workspace / filename, content)
             state[model_id] = {"content_hash": self._hash(content), "revision": None}
-        self._write_atomic(self.state_path, json.dumps(state, sort_keys=True))
+        self.write_atomic(self.state_path, json.dumps(state, sort_keys=True))
 
     async def sync_once(self) -> dict[str, str]:
         try:
@@ -153,14 +153,14 @@ class ProfileExporter:
                 content = content.replace("\r\n", "\n").strip() + "\n"
                 new_hash = self._hash(content)
                 if new_hash != saved["content_hash"]:
-                    self._write_atomic(target, content)
+                    self.write_atomic(target, content)
                     results[model_id] = "updated"
                 else:
                     results[model_id] = "unchanged"
                 state[model_id] = {"content_hash": new_hash, "revision": revision}
                 # Crash between the file and state writes is detected as local
                 # drift on restart; it will not cause an unreviewed overwrite.
-                self._write_atomic(self.state_path, json.dumps(state, sort_keys=True))
+                self.write_atomic(self.state_path, json.dumps(state, sort_keys=True))
         finally:
             if self.worker.client is None:
                 await client.aclose()
