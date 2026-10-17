@@ -98,7 +98,7 @@ def main():
         'HINDSIGHT_API_EMBEDDINGS_OPENAI_BASE_URL': 'http://127.0.0.1:8891/v1',
         'HINDSIGHT_API_EMBEDDINGS_OPENAI_MODEL': 'qwen3-embedding-0.6b-q8_0',
         'HINDSIGHT_API_EMBEDDINGS_OPENAI_DIMENSIONS': '1024',
-        'HINDSIGHT_API_EMBEDDINGS_OPENAI_BATCH_SIZE': '1',
+        'HINDSIGHT_API_EMBEDDINGS_OPENAI_BATCH_SIZE': '8',
         'HINDSIGHT_API_EMBEDDINGS_MAX_CONCURRENT_REQUESTS': '1',
         'HINDSIGHT_API_EMBEDDINGS_QUERY_PREFIX': 'Instruct: Given a question about past conversations, retrieve the relevant memory that answers it.\nQuery: ',
         'HINDSIGHT_API_EMBEDDINGS_PASSAGE_PREFIX': '',
@@ -150,7 +150,7 @@ StandardError=null
 '''
     units = {
         'postgres': (f'ExecStart={PG}/postgres -D {pgdata}\nRuntimeDirectory=hindsight-postgres\nReadWritePaths=/run/hindsight-postgres\nMemoryMax=384M\n', ''),
-        'embedding': (f'ExecStart={OPT}/llama/llama-server --model {OPT}/models/{MODEL} --alias qwen3-embedding-0.6b-q8_0 --host 127.0.0.1 --port 8891 --embedding --pooling last --threads 2 --threads-batch 2 --ctx-size 4096 --batch-size 1024 --ubatch-size 1024 --parallel 1\nEnvironment=LD_LIBRARY_PATH=/opt/hindsight/llama\nNice=10\nMemoryMax=1300M\n', ''),
+        'embedding': (f'ExecStart={OPT}/llama/llama-server --model {OPT}/models/{MODEL} --alias qwen3-embedding-0.6b-q8_0 --host 127.0.0.1 --port 8891 --embedding --pooling last --threads 2 --threads-batch 2 --ctx-size 8192 --kv-unified --kv-unified-per-slot 4096 --batch-size 1024 --ubatch-size 1024 --parallel 8\nEnvironment=LD_LIBRARY_PATH=/opt/hindsight/llama\nNice=10\nMemoryMax=2300M\n', ''),
         'api': (f'ExecStart={OPT}/venv/bin/python {OPT}/launch.py api\nMemoryMax=640M\n', 'After=hindsight-postgres.service hindsight-embedding.service\nRequires=hindsight-postgres.service hindsight-embedding.service\n'),
         'worker': (f'ExecStart={OPT}/venv/bin/python {OPT}/launch.py worker\nMemoryMax=900M\nNice=10\n', f'After=hindsight-api.service\nRequires=hindsight-api.service\nConditionPathExists=!{pause}\n'),
     }

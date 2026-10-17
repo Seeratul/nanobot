@@ -323,3 +323,47 @@ small and not representative of all technical chats. Quota pauses can extend it.
 The user requested only a five-minute observation, then an ETA and an end to the
 Codex monitoring loop. Monitoring has ended; the enabled import service continues
 independently. See history-import-report.json for the sanitized measured snapshot.
+
+## Batch eight and paused initial import, 2026-10-17
+
+At Felix's request the history importer and dedicated Hindsight worker were
+stopped before changing batching. Stop verification checked MainPID=0 and
+ControlPID=0; submitted operations were not cancelled or declared complete.
+Original archives and the durable outbox remain intact.
+
+Hindsight is configured for eight texts per embedding HTTP request, with one
+in-flight request. Qwen uses eight parallel sequence slots, two CPU threads and
+the existing 1,024-token logical/physical batch sizes. A text batch count is not
+the same parameter as llama.cpp's token batch size.
+
+Reserving 32,768 context tokens for eight fully reserved 4,096-token slots caused
+memory pressure and swapping on this Pi; validation was stopped and that
+configuration was removed. The installed version supports a unified KV pool:
+`--ctx-size 8192 --kv-unified --kv-unified-per-slot 4096 --parallel 8`.
+The total shared pool is 8,192 tokens, with a 4,096-token maximum per sequence;
+eight simultaneous sequences cannot each occupy a full 4,096-token context.
+The service's nominal MemoryMax is 2300M, but the earlier kernel limitation still
+means this is not an enforced RAM limit. Verify live memory rather than relying
+on it. No KV quantization, model weights, thread counts or boot settings changed.
+
+The corrected configuration reports eight slots with n_ctx=4096 and initially
+about 1.9 GiB available system RAM during the mixed test. The first short test
+used the same eight synthetic inputs, once as sequential single-text requests
+and once as one eight-text request: 10.144 seconds versus 10.352 seconds, minimum
+cosine similarity 0.9996568554, correct indices and 1,024 dimensions. This single
+short test shows no speedup and does not establish production throughput. The
+large mixed test includes the actual longest initial source chunk (2,120 tokens)
+plus seven short texts and checks all eight result indices and complete token
+usage. See batch8-report.json after validation finishes.
+
+configure_batch8.py requires the importer and worker to be stopped, updates only
+the non-secret batching choices inside the existing private runtime configuration,
+preserves file ownership and mode, and installs the bounded unified-pool command.
+It does not resume import. The normal installer now emits the same settings.
+
+
+The mixed long batch passed: eight 1,024-dimensional vectors, correct result
+indices and all 2,221 input tokens including per-sequence BOS, in 280.693 seconds.
+The import and worker remain explicitly paused. The API and embedding service
+are restored; Nanobot remains active. This change does not claim a throughput
+gain: the measured single short comparison was approximately equal in speed.

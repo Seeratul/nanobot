@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "slots": 8,
+  "context_per_slot": 4096,
+  "serial_short_seconds": 10.144,
+  "batch8_short_seconds": 10.352,
+  "short_observed_speedup": 0.98,
+  "minimum_cosine_to_serial": 0.9996568554161123,
+  "long_mixed_batch_seconds": 280.693,
+  "longest_real_input_tokens": 2120,
+  "mixed_total_reported_tokens": 2221,
+  "token_counts_match_without_truncation": true,
+  "dimensions": 1024,
+  "shared_context_pool_tokens": 8192,
+  "import_resumed": false,
+  "short_test_establishes_production_speedup": false
+}
