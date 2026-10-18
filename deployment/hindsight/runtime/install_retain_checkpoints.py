@@ -64,7 +64,7 @@ from retain_checkpoints import install
 install('felix-pi')
 '''
     subprocess.run(['sudo', '-u', 'hindsight', '/opt/hindsight/venv/bin/python', '-c', validation],
-                   check=True)
+                   check=True, cwd='/var/lib/hindsight')
     # Native startup recovery otherwise fails a task already at its recovery cap.
     # Grant only the one required recovery; never reset task rows or retry counts.
     config['HINDSIGHT_API_WORKER_MAX_RETRIES'] = str(limit)
