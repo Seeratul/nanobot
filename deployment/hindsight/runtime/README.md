@@ -525,3 +525,26 @@ document IDs or arbitrary metric labels. Only fixed worker IDs, timestamps,
 numeric totals and process-start identities are stored. Errors do not turn an
 already successful model call into a retry. Native full-content tracing stays
 disabled. No external telemetry service or new model calls are added.
+
+
+## Large historical-retain wall limit, 2026-10-18
+
+HINDSIGHT_API_RETAIN_WALL_TIMEOUT is explicitly 86400 seconds (24 hours).
+The native default was an absolute one-hour ceiling. Two partially imported
+multi-megabyte documents entered delta retain, which gathers extraction for all
+missing chunks before embedding/writing them. Those jobs repeatedly exceeded
+one hour; the outbox retried their failed operations, so successful Luna calls
+did not translate into new durable chunks.
+
+install_retain_timeout.py is the stopped-installation upgrade helper. Stop
+hindsight-history-import first, take a final usage-counter sample, then stop the
+shared hindsight-worker unit. The helper atomically changes only the retain
+wall-limit field, preserving runtime ownership, permissions and other settings.
+Start the existing worker/import services afterwards. A restart discards
+uncommitted extraction results; committed source chunks and facts are retained.
+Native per-call LLM timeouts, two workers/two slots, Qwen batch eight and six
+threads, provider identity, OAuth and the forget gate remain unchanged.
+
+Validation checks the native _wall_timeout_for against actual task payload
+types (batch_retain), not just the JSON field. This is a timeout correction,
+not evidence that the import has finished or a new throughput/ETA measurement.
