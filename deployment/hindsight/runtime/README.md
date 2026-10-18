@@ -454,3 +454,38 @@ loaded enabled timer and next firing time were checked. The observed timer state
 was active with next elapse 2026-10-17 21:00:00 CEST, no prior trigger. The dry
 check confirmed deadline_reached=false, hold_present=true, forget_pending=false.
 The future job was not run early. No Codex monitoring loop remains active.
+
+
+## Two native worker processes, 2026-10-18
+
+At Felix's request the historical import continues with two native worker
+processes and two task slots per process. Both run under the existing
+hindsight-worker.service and its control group. The stable worker IDs are
+felix-pi (retained for native recovery of the interrupted task) and felix-pi-2;
+their loopback health ports are 8892 and 8893. The API's embedded worker stays
+disabled. LLM and embedding concurrency limits remain one per process, so up
+to two calls can run across the two processes. Qwen still has eight text slots,
+batch eight, six CPU/batch threads and the bounded shared 8192-token KV pool.
+
+worker_supervisor.py fails the shared unit if either child exits unexpectedly,
+allowing the existing Restart=on-failure policy to recover the group. Under
+KillMode=control-group systemd sends the stop signal to both children directly;
+the supervisor does not forward a duplicate SIGTERM. It allows 38 seconds for
+child shutdown before killing a remaining child. The unit stop timeout is
+50 seconds. The fixed forget gate and marker condition still stop the entire
+shared unit, with NoNewPrivileges retained. MemoryMax is nominally 1400M for
+the combined workers; the current Pi kernel lacks memory-controller enforcement.
+
+The preceding 603.2-second experiment used an ephemeral database copy, which
+was removed afterwards. Both processes worked concurrently (three claimed
+tasks), completed at least 322 successful extraction calls, used at most
+791.8 MiB combined RSS and reached at most 54.53 C. No large retain job finished
+within that window. It establishes resource/concurrency feasibility, not a
+measured throughput improvement against an identical single-worker baseline.
+See worker-parallel-test-report.json for aggregate counters.
+
+install_parallel_workers.py is an explicit upgrade helper for an already
+stopped installation. It preserves runtime credentials and provider settings,
+sets two slots, installs the supervisor, adjusts the worker unit, and reloads
+systemd without starting the importer itself. Do not rerun the initial installer
+on an existing installation. The production Nanobot package remains unchanged.

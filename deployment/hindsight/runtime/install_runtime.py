@@ -37,7 +37,7 @@ def main():
         raise SystemExit('root required')
     if (OPT / 'installed.json').exists():
         raise SystemExit('already installed; inspect before performing an upgrade')
-    for port in (8888, 8891, 8892, 55433):
+    for port in (8888, 8891, 8892, 8893, 55433):
         import socket
         with socket.socket() as sock:
             if sock.connect_ex(('127.0.0.1', port)) == 0:
@@ -106,7 +106,7 @@ def main():
         'HINDSIGHT_API_RECALL_INCLUDE_CHUNKS': 'false',
         'HINDSIGHT_API_DB_POOL_MIN_SIZE': '1',
         'HINDSIGHT_API_DB_POOL_MAX_SIZE': '6',
-        'HINDSIGHT_API_WORKER_MAX_SLOTS': '1',
+        'HINDSIGHT_API_WORKER_MAX_SLOTS': '2',
         'HINDSIGHT_API_WORKER_CONSOLIDATION_RESERVED_SLOTS': '0',
         'HINDSIGHT_API_WORKER_MAX_RETRIES': '1',
         'HINDSIGHT_API_WORKER_TASK_RETRY_BACKOFF_SECONDS': '300',
@@ -121,13 +121,14 @@ def main():
         'DO_NOT_TRACK': '1', 'HF_HUB_OFFLINE': '1',
     }
     write(DATA / 'runtime.json', json.dumps(env), 0o600, owner=True)
+    write(OPT / 'worker_supervisor.py', Path(__file__).with_name('worker_supervisor.py').read_text())
     write(OPT / 'launch.py', '''import json, os, sys
 from pathlib import Path
 env = {**os.environ, **json.loads(Path('/var/lib/hindsight/runtime.json').read_text())}
 mode = sys.argv[1]
 commands = {
  'api': ['/opt/hindsight/venv/bin/hindsight-api', '--host', '127.0.0.1', '--port', '8888', '--workers', '1', '--no-access-log'],
- 'worker': ['/opt/hindsight/venv/bin/hindsight-worker', '--worker-id', 'felix-pi', '--http-host', '127.0.0.1', '--http-port', '8892'],
+ 'worker': ['/opt/hindsight/venv/bin/python', '/opt/hindsight/worker_supervisor.py'],
 }
 command = commands[mode]
 os.execvpe(command[0], command, env)
@@ -152,7 +153,7 @@ StandardError=null
         'postgres': (f'ExecStart={PG}/postgres -D {pgdata}\nRuntimeDirectory=hindsight-postgres\nReadWritePaths=/run/hindsight-postgres\nMemoryMax=384M\n', ''),
         'embedding': (f'ExecStart={OPT}/llama/llama-server --model {OPT}/models/{MODEL} --alias qwen3-embedding-0.6b-q8_0 --host 127.0.0.1 --port 8891 --embedding --pooling last --threads 6 --threads-batch 6 --ctx-size 8192 --kv-unified --kv-unified-per-slot 4096 --batch-size 1024 --ubatch-size 1024 --parallel 8\nEnvironment=LD_LIBRARY_PATH=/opt/hindsight/llama\nNice=10\nMemoryMax=2300M\n', ''),
         'api': (f'ExecStart={OPT}/venv/bin/python {OPT}/launch.py api\nMemoryMax=640M\n', 'After=hindsight-postgres.service hindsight-embedding.service\nRequires=hindsight-postgres.service hindsight-embedding.service\n'),
-        'worker': (f'ExecStart={OPT}/venv/bin/python {OPT}/launch.py worker\nMemoryMax=900M\nNice=10\n', f'After=hindsight-api.service\nRequires=hindsight-api.service\nConditionPathExists=!{pause}\n'),
+        'worker': (f'ExecStart={OPT}/venv/bin/python {OPT}/launch.py worker\nMemoryMax=1400M\nTimeoutStopSec=50\nNice=10\n', f'After=hindsight-api.service\nRequires=hindsight-api.service\nConditionPathExists=!{pause}\n'),
     }
     for name, (extra, dependencies) in units.items():
         write(Path('/etc/systemd/system') / f'hindsight-{name}.service',

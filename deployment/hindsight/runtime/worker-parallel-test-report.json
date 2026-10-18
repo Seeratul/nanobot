@@ -1,0 +1,26 @@
+{
+  "status": "complete",
+  "elapsed_seconds": 603.2,
+  "workers": 2,
+  "slots_per_worker": 2,
+  "minimum_available_mib": 1119.4,
+  "maximum_temperature_c": 54.53,
+  "maximum_combined_worker_rss_mib": 791.8,
+  "worker_average_cpu_percent": [
+    96.1,
+    97.2
+  ],
+  "swap_out_mib": 19.5,
+  "stored_chunks_delta": 0,
+  "stored_facts_delta": 0,
+  "failed_operations_after": 0,
+  "at_least_successful_llm_extraction_calls": 322,
+  "processing_tasks_peak": 3,
+  "production_counts_unchanged": true,
+  "test_database_removed": true,
+  "test_pids_exited": true,
+  "test_dropin_removed": true,
+  "restored_slots": "1",
+  "stop_reason": null,
+  "interpretation": "Concurrency and resource stability verified. Ten minutes did not complete the large jobs. No throughput gain established against an identical single-worker baseline."
+}
