@@ -1,4 +1,4 @@
-"""Install a numeric-only Codex usage hook, then run the unmodified native worker."""
+"""Install local usage/recovery hooks, then run the native worker entrypoint."""
 import functools
 import logging
 import sqlite3
@@ -45,6 +45,9 @@ def main() -> None:
 
     worker = sys.argv[sys.argv.index('--worker-id') + 1]
     install_hook(CodexLLM, worker)
+    from retain_checkpoints import install as install_checkpoints
+
+    install_checkpoints(worker)
     native_main()
 
 

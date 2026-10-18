@@ -548,3 +548,74 @@ threads, provider identity, OAuth and the forget gate remain unchanged.
 Validation checks the native _wall_timeout_for against actual task payload
 types (batch_retain), not just the JSON field. This is a timeout correction,
 not evidence that the import has finished or a new throughput/ETA measurement.
+
+
+## Resumable extraction and embeddings, 2026-10-18
+
+A final live check still found 1571/4786 historical source chunks stored.
+The new recovery version was therefore implemented and tested for this pinned
+hindsight-api-slim 1.0.0 runtime. It is installed through the root-owned worker
+startup adapter; native chunk ordering, fact conversion and database writes
+are unchanged. The current running import was not replaced during development.
+
+Extraction results are checkpointed per source chunk with Pydantic-validated
+JSON; successful OpenAI-compatible embedding batches are checkpointed before
+the next batch is requested. SQLite uses synchronous=FULL and private directory
+0700/database 0600 under /var/lib/hindsight/checkpoints. These recovery payloads
+contain extracted facts and vectors, not full prompts; they are distinct from
+the content-free usage ledger. Checkpoint keys bind to the native operation,
+source/input, relevant extraction configuration, model, dimensions and native
+implementation hashes. Schema changes invalidate caches. Attachment-bearing
+chunks bypass extraction caching because asset contents are not fingerprinted.
+Only the installed default/public-schema worker path is supported.
+
+The control-directory identity and mtime/ctime namespace fences cache use.
+Creating or removing forget-pending invalidates the previous namespace, including
+after a stopped retirement, so its cached facts cannot be replayed into a later
+retain. Existing native forget gates and original-source suppression stay in
+charge. A cached extraction returns zero new token usage; it does not create a
+fabricated Luna call in the usage ledger. Invalid/corrupted data fails closed.
+
+Each embedding plan reports planned/completed/remaining vector counts, last
+checkpoint time and in_progress/complete/interrupted state. Duplicate inputs
+are counted by multiplicity while vector order is preserved. These are recovery
+counts, not committed Hindsight source chunks: the native delta write still
+waits until the whole phase succeeds. A synthetic third-batch interruption after
+16/24 vectors resumes with only eight vectors computed after reopening the DB.
+Repeated successful calls reuse all batches. Checkpoints do not recover
+uncommitted work from runs that predate installation.
+
+Failure observations retain only worker, timestamp, phase and a fixed category.
+Native poller failure/retry hooks also capture categories before retry clears
+the native error field. Categories based on native error messages are heuristic;
+raw messages, prompts and responses are not included in reports/history.
+One failure can produce observations at more than one layer.
+
+To activate, stop hindsight-history-import first and the shared hindsight-worker
+unit second, then run install_retain_checkpoints.py as root with sibling sources.
+It refuses active workers, checks the pinned package and native signatures,
+installs root-owned code and initializes the private DB as hindsight. It reads
+outstanding task retry counts and grants only the recovery allowance needed for
+this controlled switch (current installation needs two rather than one).
+It refuses an allowance above five. It does not reset task rows or start
+services. Resume with the existing fixed resume helper. Current uncommitted
+results are lost at the switch; cached future results survive subsequent retries.
+Qwen batch eight/six threads, Luna, two workers/two slots and the 24-hour retain
+ceiling remain configured through the existing runtime.
+
+Report and cleanup (on the Pi):
+
+    sudo -u hindsight /opt/hindsight/venv/bin/python /opt/hindsight/retain_checkpoints.py report
+    sudo -u hindsight /opt/hindsight/venv/bin/python /opt/hindsight/retain_checkpoints.py prune
+
+Prune reads native operation status and deletes only recovery data for completed/
+cancelled operations or invalidated forget namespaces; it never deletes native
+memories or source archives. Failed/incomplete operations keep their recovery
+data. Failure-category history remains available after pruning.
+
+Validation: 11 checkpoint tests plus five usage-ledger tests against installed
+native interfaces, with synthetic data and no provider calls. Includes restart/
+cancellation recovery, duplicate batches, model/operation isolation, corruption,
+forget namespace fences, extraction reuse without token double counting, private
+file modes and sanitized failure history. Live installer guard was checked
+against running services and refused installation without changing them.

@@ -27,7 +27,7 @@ def main() -> None:
     directory.mkdir(mode=0o700, exist_ok=True)
     os.chown(directory, account.pw_uid, account.pw_gid)
     os.chmod(directory, 0o700)
-    for name in ['usage_ledger.py', 'usage_worker.py', 'worker_supervisor.py']:
+    for name in ['usage_ledger.py', 'usage_worker.py', 'worker_supervisor.py', 'retain_checkpoints.py']:
         atomic(OPT / name, (SOURCE / name).read_text(), 0o644)
         atomic(OPT / 'maintenance' / name, (SOURCE / name).read_text(), 0o644)
     service = '''[Unit]
