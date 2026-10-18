@@ -45,7 +45,8 @@ def run(commands):
 
 def main():
     run([
-        ['/opt/hindsight/venv/bin/hindsight-worker', '--worker-id', identity,
+        ['/opt/hindsight/venv/bin/python', '/opt/hindsight/usage_worker.py',
+         '--worker-id', identity,
          '--http-host', '127.0.0.1', '--http-port', str(port)]
         for identity, port in [('felix-pi', 8892), ('felix-pi-2', 8893)]
     ])

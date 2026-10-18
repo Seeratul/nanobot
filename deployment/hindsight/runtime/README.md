@@ -489,3 +489,39 @@ stopped installation. It preserves runtime credentials and provider settings,
 sets two slots, installs the supervisor, adjusts the worker unit, and reloads
 systemd without starting the importer itself. Do not rerun the initial installer
 on an existing installation. The production Nanobot package remains unchanged.
+
+
+## Local numeric usage ledger, 2026-10-18
+
+After the native workers are healthy, run install_usage_tracking.py as root from
+the installed maintenance directory, with the sibling usage modules and
+install_parallel_workers.py present. It installs/enables a local systemd timer
+that scrapes the two fixed loopback metrics endpoints every 30 seconds. It does
+not restart workers, change runtime credentials, or enable content tracing.
+
+The ledger is /var/lib/hindsight/usage/usage.sqlite3 (directory 0700, database
+0600, owner hindsight). SQLite transactions use synchronous=FULL. Run:
+
+    sudo -u hindsight /opt/hindsight/venv/bin/python /opt/hindsight/usage_ledger.py report
+
+Counters are keyed by fixed worker ID and Linux boot/PID/start identity.
+Repeated scrapes update a maximum rather than double count; totals survive
+collector and worker restarts. The first scrape captures counts since the
+currently running workers started, not the entire historical import. Counters
+before tracking and the unsampled tail of an abruptly stopped worker cannot be
+reconstructed. A crashed worker can lose up to the scrape interval of call
+counts (longer if collection fails). The native counters count provider calls,
+not every internal HTTP retry.
+
+At the next worker start, the supervisor launches usage_worker.py, which wraps
+only CodexLLM.call and then runs the native worker entrypoint. It records
+successful calls' provider character/4 input/output estimates in daily UTC
+aggregates. The in-flight import was deliberately not restarted to activate
+this hook. Earlier calls have no estimates; missing estimates never imply zero
+usage. Estimates omit hidden reasoning, cache accounting and potentially schema
+overhead; they are neither billed-token counts nor subscription quota usage.
+The wrapper persists no arguments, output content, error strings, bank IDs,
+document IDs or arbitrary metric labels. Only fixed worker IDs, timestamps,
+numeric totals and process-start identities are stored. Errors do not turn an
+already successful model call into a retry. Native full-content tracing stays
+disabled. No external telemetry service or new model calls are added.

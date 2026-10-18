@@ -121,7 +121,8 @@ def main():
         'DO_NOT_TRACK': '1', 'HF_HUB_OFFLINE': '1',
     }
     write(DATA / 'runtime.json', json.dumps(env), 0o600, owner=True)
-    write(OPT / 'worker_supervisor.py', Path(__file__).with_name('worker_supervisor.py').read_text())
+    for name in ['worker_supervisor.py', 'usage_worker.py', 'usage_ledger.py']:
+        write(OPT / name, Path(__file__).with_name(name).read_text())
     write(OPT / 'launch.py', '''import json, os, sys
 from pathlib import Path
 env = {**os.environ, **json.loads(Path('/var/lib/hindsight/runtime.json').read_text())}
