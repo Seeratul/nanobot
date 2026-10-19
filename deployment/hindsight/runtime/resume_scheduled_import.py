@@ -28,7 +28,7 @@ def main():
         raise RuntimeError('scheduled time has not arrived')
     if FORGET.exists():
         raise RuntimeError('pending fact retirement blocks resumption')
-    if Path('/var/lib/hindsight/checkpoints/import-timeout.hold').exists():
+    if Path('/var/lib/hindsight/import-timeout.hold').exists():
         raise RuntimeError('timeout hold requires explicit review before resumption')
     HOLD.unlink(missing_ok=True)
     directory = os.open(HOLD.parent, os.O_RDONLY | os.O_DIRECTORY)

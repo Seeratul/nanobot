@@ -255,7 +255,7 @@ def rollback():
     stopped()
     # An explicit rollback restores the old worker without the new stop adapter.
     # Keep any timeout evidence in the private recovery directory.
-    timeout_path = DATA / 'checkpoints/import-timeout.hold'
+    timeout_path = DATA / 'import-timeout.hold'
     if timeout_path.exists():
         shutil.copy2(timeout_path, target / 'rollback-timeout-evidence.json')
         timeout_path.unlink()
@@ -263,6 +263,7 @@ def rollback():
                    check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for unit in ['hindsight-worker', 'hindsight-history-import']:
         (Path('/etc/systemd/system') / (unit + '.service.d/timeout-stop.conf')).unlink(missing_ok=True)
+    (Path('/etc/systemd/system/hindsight-history-import.service.d/catchup.conf')).unlink(missing_ok=True)
     account = pwd.getpwnam('hindsight')
     nanobot = pwd.getpwnam('nanobot')
     for name, destination, uid, gid, mode in [

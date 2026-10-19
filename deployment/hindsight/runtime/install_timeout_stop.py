@@ -12,7 +12,7 @@ from switch_openrouter import atomic
 
 DATA = Path('/var/lib/hindsight')
 OPT = Path('/opt/hindsight')
-HOLD = DATA / 'checkpoints/import-timeout.hold'
+HOLD = DATA / 'import-timeout.hold'
 
 
 async def recovery_limit(config):
@@ -35,7 +35,8 @@ def main():
         status = subprocess.check_output(['systemctl', 'show', unit, '-p', 'ActiveState', '--value'], text=True).strip()
         if status not in ['inactive', 'failed']:
             raise RuntimeError('stop services before installing timeout guard')
-    if HOLD.exists() or (DATA / 'control/forget-pending').exists():
+    if (HOLD.exists() or (DATA / 'checkpoints/import-timeout.hold').exists()
+            or (DATA / 'control/forget-pending').exists()):
         raise RuntimeError('active hold blocks installation')
     if importlib.metadata.version('hindsight-api-slim') != '1.0.0':
         raise RuntimeError('unsupported native version')
@@ -74,7 +75,7 @@ StandardError=null
     atomic(units / 'hindsight-timeout-stop.path', '''[Unit]
 Description=Watch the fixed Hindsight import timeout hold
 [Path]
-PathChanged=/var/lib/hindsight/checkpoints/import-timeout.hold
+PathChanged=/var/lib/hindsight/import-timeout.hold
 Unit=hindsight-timeout-stop.service
 [Install]
 WantedBy=multi-user.target

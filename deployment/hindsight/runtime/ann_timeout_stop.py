@@ -7,7 +7,7 @@ import os
 import time
 from pathlib import Path
 
-HOLD = Path('/var/lib/hindsight/checkpoints/import-timeout.hold')
+HOLD = Path('/var/lib/hindsight/import-timeout.hold')
 LIMIT = 120
 
 

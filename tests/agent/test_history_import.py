@@ -7,7 +7,6 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-
 from nanobot.memory_sync.outbox import MemoryOutbox
 
 
@@ -106,7 +105,8 @@ def test_slow_embedding_exceeds_native_client_timeout(migration):
     assert outbox.status() == {}
 
 
-async def test_verify_accepts_identical_fact_from_another_source(migration, monkeypatch):
+@pytest.mark.parametrize('matching', [True, False])
+async def test_verify_requires_a_source_or_identical_fact_hit(migration, monkeypatch, matching):
     import httpx
 
     module, outbox, _ = migration
@@ -120,13 +120,20 @@ async def test_verify_accepts_identical_fact_from_another_source(migration, monk
         elif request.url.path.endswith('/memories/list'):
             data = {'items': [{'text': 'The user plays cello.', 'fact_type': 'world'}]}
         elif request.url.path.endswith('/memories/recall'):
-            data = {'results': [{'text': 'The user plays cello.', 'document_id': 'another-source'}]}
+            data = {'results': [{'text': 'The user plays cello.' if matching else 'Unrelated fact.',
+                                 'document_id': 'another-source'}]}
         else:
             raise AssertionError(request.url.path)
         return httpx.Response(200, json=data)
     original = httpx.AsyncClient
     monkeypatch.setattr(module.httpx, 'AsyncClient', lambda **kw: original(
         transport=httpx.MockTransport(handler), base_url=kw['base_url']))
+    if not matching:
+        with pytest.raises(ValueError, match='source fact not found by recall'):
+            await module.verify(state)
+        assert state['stage'] == 'delivering'
+        assert 'verification' not in state
+        return
     assert await module.verify(state)
     assert state['stage'] == 'complete'
     assert state['verification']['duplicate_fact_hits'] == 1

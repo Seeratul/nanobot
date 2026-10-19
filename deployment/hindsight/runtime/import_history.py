@@ -14,7 +14,6 @@ from pathlib import Path
 
 import httpx
 from filelock import FileLock
-
 from nanobot.memory_sync.outbox import MemoryOutbox
 from nanobot.memory_sync.profiles import ProfileExporter
 from nanobot.memory_sync.worker import HindsightWorker
@@ -148,7 +147,7 @@ async def verify(state):
                 sources_without_facts += 1
                 continue
             response = await client.post(PREFIX + '/memories/recall', json={
-                'query': rows[0]['text'], 'budget': 'low', 'max_tokens': 2000,
+                'query': rows[0]['text'], 'budget': 'mid', 'max_tokens': 4000,
                 'types': ['world', 'experience']})
             response.raise_for_status()
             hits = response.json()['results']

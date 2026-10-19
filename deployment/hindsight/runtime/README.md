@@ -655,7 +655,7 @@ ann_timeout_stop.py writes a durable, content-free hold on ANN/task timeouts,
 blocks further claims, and turns native timeout retries into terminal failure.
 The root-owned fixed timeout_gate.py path action stops the importer and the
 shared two-worker unit. Unit conditions and the resume helper refuse restart
-while /var/lib/hindsight/checkpoints/import-timeout.hold exists. There is NO
+while /var/lib/hindsight/import-timeout.hold exists. There is NO
 automatic clearing or restart. This marker is outside the forget-control
 directory, so stopping does not invalidate valid recovery checkpoints.
 
@@ -679,3 +679,42 @@ Explicit rollback (leaves the restored old run stopped for inspection):
 
 After review, resume the restored runtime with the existing resume helper.
 The old 0.6B database and private archive are preserved, not automatically deleted.
+
+## Verified initial import and incremental catch-up (2026-10-19)
+
+The initial 20 retain jobs and consolidation finished. All 18 historical source
+bodies match the frozen outbox after native sanitization; the only byte-level
+difference was removal of 170 NUL characters. Native streaming retain skips
+persisting batches that produce no facts, so 4,182 stored historical chunks must
+not be divided by the 4,786 pre-chunked inputs to report completion. All retain
+jobs reported zero extraction errors. The verifier now uses the native mid
+recall budget with 4,000 output tokens: all 17 fact-bearing sources passed a
+source recall round-trip; one source produced no facts. This is a mechanical
+coverage/retrieval check, not proof of complete semantic extraction.
+
+catchup_history.py prepare freezes only unexported conversation tails, validates
+all existing prefix fingerprints before queueing, and preserves immutable source
+archives. Its private temporary plan survives interruption between queue commit
+and manifest commit, then is removed after the outbox takes ownership. Repeating
+preparation neither loses nor duplicates queued tails. Source changes, forget
+requests and timeout holds fail closed. New jobs explicitly use timestamp=unset.
+The initial manifest remains complete; a separate hindsight-history-catchup.json
+tracks the incremental snapshot. Current catch-up: two segments, 577 messages,
+1,566,899 characters. The existing importer unit runs catchup_history.py deliver
+through a root-owned catchup.conf override, retaining all timeout-stop conditions.
+The explicit rollback helper removes this override when restoring the old run.
+
+The timeout marker is now /var/lib/hindsight/import-timeout.hold, private mode
+0600 in the traversable data directory. The Nanobot user can test its existence;
+the checkpoint directory remains 0700. The worker hook, path gate, unit conditions,
+resume helper and rollback helper use the same location. Installer refuses either
+an old or a new existing hold. A synthetic marker blocked both service starts
+and the resume helper; only that synthetic hold was removed afterward.
+
+Validation on the Pi: 319 existing targeted tests plus 10 subtests, four new
+catch-up tests, and five full-query timeout tests passed. Checks include exact
+incremental-tail delivery, idempotency, queue/manifest interruption recovery and
+changed-prefix rejection. Test HOME and dependencies are isolated from production.
+The production Nanobot package/configuration and profile files remain unchanged.
+Catch-up completion, current USER.md reconciliation, durable sync/MCP wiring,
+Dream shutdown and controlled live activation are still required before cutover.
