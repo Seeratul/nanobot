@@ -718,3 +718,22 @@ changed-prefix rejection. Test HOME and dependencies are isolated from productio
 The production Nanobot package/configuration and profile files remain unchanged.
 Catch-up completion, current USER.md reconciliation, durable sync/MCP wiring,
 Dream shutdown and controlled live activation are still required before cutover.
+
+## Two workers with four slots and four Luna calls each (2026-10-19)
+
+The user explicitly requested 2x4 task slots and four concurrent Luna calls per
+worker. configure_worker_capacity.py applies this only with importer and workers
+stopped, refuses timeout/forget holds and phase-specific concurrency conflicts,
+preserves runtime ownership/mode and grants only the native task-recovery
+allowance needed for the controlled restart. It does not change task rows or
+start services. Run it as root from /opt/hindsight/maintenance after stopping
+the importer first and shared worker unit second, then resume those two units.
+
+The persistent runtime values are HINDSIGHT_API_WORKER_MAX_SLOTS=4 and
+HINDSIGHT_API_LLM_MAX_CONCURRENT=4. The existing supervisor still creates exactly
+two workers. The native process-global LLM semaphore is shared by extraction,
+consolidation and profile calls within each worker: up to eight calls in total,
+not four per task. Remote embeddings retain batch8/max-concurrency1, and full
+ANN plus the 120-second timeout stop remain unchanged. Native recovery resumes
+unfinished tasks; uncommitted streaming work can enter the delta/checkpoint path
+and its next durable write need not happen immediately after restart.
