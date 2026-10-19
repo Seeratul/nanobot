@@ -50,7 +50,7 @@ def main():
     directory.mkdir(mode=0o700, exist_ok=True)
     os.chown(directory, account.pw_uid, account.pw_gid)
     os.chmod(directory, 0o700)
-    for name in ['retain_checkpoints.py', 'usage_worker.py']:
+    for name in ['retain_checkpoints.py', 'ann_timeout_stop.py', 'usage_worker.py']:
         source = Path(__file__).with_name(name).read_text()
         atomic(ROOT / name, source, 0o644)
         atomic(ROOT / 'maintenance' / name, source, 0o644)

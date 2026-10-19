@@ -48,6 +48,9 @@ def main() -> None:
     from retain_checkpoints import install as install_checkpoints
 
     install_checkpoints(worker)
+    from ann_timeout_stop import install as install_timeout_stop
+
+    install_timeout_stop(worker)
     native_main()
 
 

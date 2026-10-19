@@ -44,7 +44,7 @@ def main():
     account = pwd.getpwnam('hindsight')
     runtime = json.loads(RUNTIME.read_text())
     runtime['HINDSIGHT_API_WORKER_MAX_SLOTS'] = '2'
-    for name in ['worker_supervisor.py', 'usage_worker.py', 'usage_ledger.py', 'retain_checkpoints.py']:
+    for name in ['worker_supervisor.py', 'usage_worker.py', 'usage_ledger.py', 'retain_checkpoints.py', 'ann_timeout_stop.py']:
         atomic(OPT / name, Path(__file__).with_name(name).read_text(), 0o644)
     atomic(OPT / 'launch.py', launcher.replace(OLD, NEW), 0o644)
     atomic(RUNTIME, json.dumps(runtime), 0o600, account.pw_uid, account.pw_gid)

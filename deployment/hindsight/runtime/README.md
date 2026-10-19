@@ -619,3 +619,63 @@ cancellation recovery, duplicate batches, model/operation isolation, corruption,
 forget namespace fences, extraction reuse without token double counting, private
 file modes and sanitized failure history. Live installer guard was checked
 against running services and refused installation without changing them.
+
+## OpenRouter restart and full-query timeout stop (2026-10-19)
+
+The user explicitly requested replacing local embeddings with OpenRouter
+qwen/qwen3-embedding-8b, a complete historical-import restart, and a recovery
+point for the old run. Two synthetic requests verified 1024-dimensional output.
+The model stays at 1024 dimensions for the existing pgvector schema, but lives
+in a NEW database. Never mix the old 0.6B vectors with the new 8B vectors.
+Luna/Codex OAuth remains the extraction provider; its numeric ledger continues.
+
+switch_openrouter.py is a guarded, one-time Pi migration with snapshot, switch,
+seed, report and rollback actions. Snapshot stops importer, workers, API and
+local embeddings, preserves SQLite outbox/checkpoints using SQLite backup,
+private runtime/state and original helpers, and exports/verifies a private
+PostgreSQL custom archive. The ORIGINAL database stays present and unchanged.
+Recovery checksums remain private. The new database is initialized by the API;
+profile models are copied with NEW remote embeddings and no old vector or
+old fact links. Existing SOUL.md/USER.md and raw conversation archives are not
+rewritten. Twenty immutable source/profile jobs are reset for the new database.
+Existing forgotten/suppressed sources block this migration. Historical text
+already includes source dates; the enclosing retained snapshot now explicitly
+uses timestamp=unset instead of inventing a new processing-time date on retry.
+The original frozen snapshot still requires later catch-up before main cutover.
+
+The user rejected search batching. The FINAL runtime therefore passes the
+COMPLETE original arrays to the native ANN function exactly once. No slicing,
+changed top-k, reduced similarity threshold or replacement search is installed.
+Both DB command and statement limits are 120 seconds, and asyncio.timeout(120)
+bounds the COMPLETE ANN operation (including its fact-type queries and setup).
+A CPU-free counterprobe still reproduced the old 2853-vector timeout at the
+previous 60-second SQL cap; it did not establish a physical hardware defect.
+
+ann_timeout_stop.py writes a durable, content-free hold on ANN/task timeouts,
+blocks further claims, and turns native timeout retries into terminal failure.
+The root-owned fixed timeout_gate.py path action stops the importer and the
+shared two-worker unit. Unit conditions and the resume helper refuse restart
+while /var/lib/hindsight/checkpoints/import-timeout.hold exists. There is NO
+automatic clearing or restart. This marker is outside the forget-control
+directory, so stopping does not invalidate valid recovery checkpoints.
+
+Install install_timeout_stop.py with its sibling sources only when importer,
+workers and API are stopped. It pins native 1.0.0, validates interfaces, grants
+only needed recovery allowance, installs the fixed path gate and updates the
+private runtime. resume_scheduled_import.py starts local embeddings only when
+the actual configured base URL is the original loopback embedding endpoint.
+The local model/service remain installed for recovery, but stopped/disabled.
+
+Five Linux unit tests verify full-array identity/single-call semantics, deadline
+cancellation, private durable hold, suppressed native retries/claims and normal
+non-timeout behavior. A synthetic marker tested the REAL systemd path action,
+blocked starts of both real stopped units, and refusal by the resume helper;
+only the synthetic marker was then removed. This is not an injected real error
+or evidence that the complete import has finished. No monitoring loop runs.
+
+Explicit rollback (leaves the restored old run stopped for inspection):
+
+    sudo /opt/hindsight/venv/bin/python /opt/hindsight/maintenance/switch_openrouter.py rollback
+
+After review, resume the restored runtime with the existing resume helper.
+The old 0.6B database and private archive are preserved, not automatically deleted.

@@ -122,7 +122,7 @@ def main():
         'DO_NOT_TRACK': '1', 'HF_HUB_OFFLINE': '1',
     }
     write(DATA / 'runtime.json', json.dumps(env), 0o600, owner=True)
-    for name in ['worker_supervisor.py', 'usage_worker.py', 'usage_ledger.py', 'retain_checkpoints.py']:
+    for name in ['worker_supervisor.py', 'usage_worker.py', 'usage_ledger.py', 'retain_checkpoints.py', 'ann_timeout_stop.py']:
         write(OPT / name, Path(__file__).with_name(name).read_text())
     write(OPT / 'launch.py', '''import json, os, sys
 from pathlib import Path
