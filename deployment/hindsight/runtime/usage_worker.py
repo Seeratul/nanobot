@@ -51,6 +51,9 @@ def main() -> None:
     from ann_timeout_stop import install as install_timeout_stop
 
     install_timeout_stop(worker)
+    from retry_limits import install as install_retry_limits
+
+    install_retry_limits()
     native_main()
 
 

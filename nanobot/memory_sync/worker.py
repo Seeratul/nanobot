@@ -5,13 +5,14 @@ from __future__ import annotations
 import asyncio
 import json
 import random
+import time
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
 import httpx
 from filelock import FileLock
 
-from nanobot.memory_sync.outbox import MemoryOutbox
+from nanobot.memory_sync.outbox import MemoryJob, MemoryOutbox
 from nanobot.security.network import PinnedDNSAsyncTransport, validate_url_target
 
 
@@ -22,6 +23,8 @@ class HindsightWorker:
         self, outbox: MemoryOutbox, *, api_url: str, bank_id: str,
         client: httpx.AsyncClient | None = None,
         hold_path: Path | None = None,
+        max_delivery_attempts: int = 5,
+        retry_window_seconds: int = 21600,
     ):
         parts = urlsplit(api_url)
         if (parts.scheme != "http" or parts.hostname not in {"127.0.0.1", "::1", "localhost"}
@@ -33,11 +36,32 @@ class HindsightWorker:
         self.prefix = f"/v1/default/banks/{quote(bank_id, safe='')}"
         self.client = client
         self.hold_path = hold_path
+        if max_delivery_attempts < 1 or retry_window_seconds < 1:
+            raise ValueError("delivery retry limits must be positive")
+        self.max_delivery_attempts = max_delivery_attempts
+        self.retry_window_seconds = retry_window_seconds
         self.lock_path = outbox.path.with_suffix(".delivery.lock")
 
     @staticmethod
     def backoff(attempts: int) -> float:
         return min(3600, 10 * 2 ** min(attempts, 9) * random.uniform(0.8, 1.2))
+
+    def _retry_allowed(self, job: MemoryJob) -> bool:
+        """A persisted budget spans API retries and process restarts.
+
+        Completion/status reads remain allowed. The time window limits new
+        attempts; it does not cancel already running remote work.
+        """
+        code = None
+        if job.attempts >= self.max_delivery_attempts:
+            code = "retry_budget_exhausted"
+        elif (job.first_attempt_at is not None
+              and time.time() - job.first_attempt_at >= self.retry_window_seconds):
+            code = "retry_window_exhausted"
+        if code:
+            self.outbox.record(job.document_id, "needs_attention", error_code=code)
+            return False
+        return True
 
     async def run_once(self) -> str:
         """One serialized delivery/poll. Never acknowledge HTTP acceptance as completion."""
@@ -80,8 +104,12 @@ class HindsightWorker:
                     transient = any(word in error for word in (
                         "429", "rate limit", "rate_limit", "quota", "usage limit",
                         "timeout", "temporarily unavailable", "503", "502",
+                        "clientconnectordnserror", "temporary failure in name resolution",
+                        "name or service not known", "connection reset", "connection refused",
                     ))
                     if transient:
+                        if not self._retry_allowed(job):
+                            return "attention"
                         if self.hold_path is not None and self.hold_path.exists():
                             return "paused"
                         retried = await client.post(operation_path + "/retry")
@@ -92,6 +120,8 @@ class HindsightWorker:
                     self.outbox.record(job.document_id, "needs_attention", error_code="remote_failed")
                     return "attention"
                 if state == "not_found":
+                    if not self._retry_allowed(job):
+                        return "attention"
                     if self.hold_path is not None and self.hold_path.exists():
                         return "paused"
                     response = await client.post(
@@ -109,12 +139,16 @@ class HindsightWorker:
                 self.outbox.record(job.document_id, "needs_attention", error_code="unexpected_operation_state")
                 return "attention"
             except (httpx.TransportError, httpx.TimeoutException):
+                if not self._retry_allowed(job):
+                    return "attention"
                 self.outbox.record(job.document_id, resume_state, delay=delay,
                                    attempted=True, error_code="transport_error")
                 return "retry"
             except httpx.HTTPStatusError as exc:
                 status = exc.response.status_code
                 if status in {408, 425, 429} or status >= 500:
+                    if not self._retry_allowed(job):
+                        return "attention"
                     self.outbox.record(job.document_id, resume_state, delay=delay,
                                        attempted=True, error_code=f"http_{status}")
                     return "retry"

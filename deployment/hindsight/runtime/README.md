@@ -827,3 +827,61 @@ installed integration and live scoped reads. reconcile_cutover_profiles.py emits
 only content-free line references. The existing pre-embedding recovery point
 remains intact; stop/deactivate production Hindsight sync before restoring an
 older database/runtime.
+
+
+### Outage diagnostics and retry/startup safeguards (2026-10-20 evening)
+
+Installed after the user authorized diagnostics plus retry and startup changes.
+
+- pi-outage-diagnostics.timer samples after boot and every30seconds after the
+  previous sample completes. Private fsynced JSONL files live in
+  /var/log/pi-diagnostics/ (0700; files0600). Rotation caps the event log at
+  four2MiB files (8MiB total), plus a tiny kernel cursor.
+- Samples contain boot/uptime/wall time, RAM/swap/load/temperature/throttle state,
+  disk availability, fixed interface counters, router/external-IP ping results,
+  Codex/OpenRouter DNS results, service states, local API health and aggregate
+  operation counts. Kernel warnings are captured separately; application
+  journals, prompts, conversation text, SSIDs and credentials are not collected.
+  A ping failure alone does not establish an outage. Host-local sampling may miss
+  the final seconds of a hard freeze or storage failure; no external watchdog
+  or automatic reboot is installed.
+- Existing global journald remains volatile. Kernel evidence and host samples
+  persist independently, avoiding blanket persistence of private app logs.
+
+Delivery settings: /etc/default/nanobot-memory-sync,
+MEMORY_MAX_DELIVERY_ATTEMPTS=5 and MEMORY_RETRY_WINDOW_SECONDS=21600 (6hours).
+Both are positive integers, configurable through the service CLI too.
+Attempts include initial submissions and adapter transport/transient retries;
+native retain's own two retries still occur within a delivery cycle. This caps
+new adapter attempts across native-counter resets, rather than claiming to cap
+all per-chunk model calls to five. The first-attempt time is durable in the
+outbox; the SQLite migration backfills old attempted jobs from created_at.
+Expiration prevents new submissions/retries, not completion/status reads or
+already-running remote work. Jobs park for attention on exhaustion and block
+only later evidence for that same conversation. DNS resolution and common
+connection failures are now recognized as temporary WITHIN that budget.
+Existing parked jobs are never automatically revived.
+
+Native consolidation retry limits are independent:
+HINDSIGHT_CONSOLIDATION_MAX_RETRIES=4 in the existing private runtime.json.
+The retry_limits.py hook enforces four retries after initial execution, marking
+the same operation failed on exhaustion. Native retain behavior, concurrency,
+ANN timeout/hold and normal queue deferrals are preserved. This is a retry
+limit, not a guarantee that every long-running attempt ends within6hours.
+
+A user-unit drop-in30-hindsight-ready.conf runs
+/opt/pi-diagnostics/wait_for_hindsight.py before the unchanged LangSmith launcher.
+It waits for the loopback API/database health for up to180seconds. Unavailable
+API fails the prestart cleanly; existing systemd restart policy waits10seconds
+before another startup attempt. No CPU-spinning loop or proxy-based loopback
+request. Readiness bounds retrying startup; it does not replace live reconnect.
+
+Validation:133tests+10subtests passed on Pi dependencies, including persistent
+attempt/age budgets, DNS/quota/transport failures, late completion receipts,
+consolidation-versus-retain behavior, readiness waiting/timeout, log rotation,
+application-log exclusion and kernel credential redaction. Actual installed
+readiness prestart exited0; Discord/MCP connected, all three health checks200;
+two durable diagnostic samples and25kernel events verified with correct modes.
+Both workers loaded retrylimit4 while preserving4slots/4Lunacalls each. Outbox
+integrity_checkok,23completed/1unchangedneeds_attention, no timeout hold.
+No reboot, automatic outage recovery or retry of the held job was performed.

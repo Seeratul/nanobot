@@ -26,6 +26,7 @@ class MemoryJob:
     operation_id: str
     state: str
     attempts: int
+    first_attempt_at: float | None = None
 
 
 class MemoryOutbox:
@@ -77,6 +78,9 @@ class MemoryOutbox:
             """)
             # executescript ends the transaction; serialize legacy schema upgrades.
             db.execute("BEGIN IMMEDIATE")
+            if not any(row["name"] == "first_attempt_at" for row in db.execute("PRAGMA table_info(jobs)")):
+                db.execute("ALTER TABLE jobs ADD COLUMN first_attempt_at REAL")
+                db.execute("UPDATE jobs SET first_attempt_at=created_at WHERE attempts>0")
             if not any(row["name"] == "revision" for row in db.execute("PRAGMA table_info(forget_requests)")):
                 db.execute("ALTER TABLE forget_requests ADD COLUMN revision INTEGER NOT NULL DEFAULT 0")
             db.execute("INSERT OR IGNORE INTO settings(key,value) VALUES ('bank_id',?)", (bank_id,))
@@ -349,8 +353,9 @@ class MemoryOutbox:
         with self._connect() as db:
             db.execute(
                 "UPDATE jobs SET state=?, next_attempt_at=?, error_code=?, attempts=attempts+? "
+                ", first_attempt_at=CASE WHEN ? THEN COALESCE(first_attempt_at,?) ELSE first_attempt_at END "
                 "WHERE document_id=? AND state NOT IN ('suppressed','completed')",
-                (state, time.time() + delay, error_code, int(attempted), document_id),
+                (state, time.time() + delay, error_code, int(attempted), int(attempted), time.time(), document_id),
             )
 
     def suppress_session(self, session_key: str) -> None:
