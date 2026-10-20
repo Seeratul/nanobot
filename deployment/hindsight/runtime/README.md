@@ -783,3 +783,47 @@ contain aggregate data only. No model requests or persistent memory writes
 occurred during query diagnostics. Access after the user reboot used the Pi's
 resolved IPv6 address with its existing IPv4 HostKeyAlias and strict key checking;
 no SSH trust checks or network configuration were weakened.
+
+
+### Production memory cutover (2026-10-20)
+
+Nanobot now uses Hindsight for long-term recall, durable evidence delivery,
+targeted fact forgetting and saved-profile projection. SOUL.md and USER.md remain
+in every normal conversation context. Legacy MEMORY.md injection and scheduled/
+manual Dream writers are disabled in Hindsight mode; conversation compaction
+and original archives remain in place.
+
+The installed system unit is nanobot-memory-sync.service, running as nanobot
+with NoNewPrivileges and mode0077. It uses the existing outbox and profile state,
+the shared forget marker, and /var/lib/hindsight/import-timeout.hold. That hold
+blocks submission/retry and startup, and the root-owned timeout gate stops the
+sync service before stopping the importer and both workers. Do not clear a real
+timeout hold without reviewing its evidence.
+
+New outbox segments explicitly use native timestamp "unset": source messages
+carry their own dates, and retries must not invent a changing event date.
+The pre-existing configured main model and LangSmith launcher are preserved.
+Hindsight keeps Luna, remote Qwen3 embeddings and the unchanged full ANN deadline.
+
+Activation required reconciling USER.md drift and repairing incomplete generated
+profiles. Saved queries contain the private inherited baseline, with explicit
+user corrections/forgetting taking precedence and source text treated as data.
+No private profile text is in this repository. A final content-free semantic
+comparison reported no missing standing information or contradictions; this is
+an automated consistency check, not semantic proof. The normal exporter then
+projected both reviewed models and verified their state hashes.
+
+Validation: 200 focused tests plus10subtests passed on the Pi; actual installed
+AgentLoop memory registration/observer/profile context checks passed; actual
+scoped MCP recall and saved-model read passed; Discord connected after restart
+with0service restarts. All23 source outbox jobs completed. Consolidation and its
+final historical verification continue normally in the background; activation
+does not imply every derived observation has finished.
+
+install_memory_cutover.py is a one-time guarded installer, not a general updater:
+it requires the exact private review receipt, stopped gateway, matching model/
+local hashes and no timeout/forget hold. verify_memory_cutover.py checks the
+installed integration and live scoped reads. reconcile_cutover_profiles.py emits
+only content-free line references. The existing pre-embedding recovery point
+remains intact; stop/deactivate production Hindsight sync before restoring an
+older database/runtime.

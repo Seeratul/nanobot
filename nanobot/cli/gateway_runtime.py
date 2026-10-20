@@ -822,7 +822,7 @@ def _run_gateway(
     # Register Dream system job (idempotent on restart)
     from nanobot.cron.types import CronJob, CronPayload, CronSchedule
     dream_cfg = config.agents.defaults.dream
-    if dream_cfg.enabled:
+    if dream_cfg.enabled and not config.agents.defaults.hindsight.enabled:
         cron.register_system_job(CronJob(
             id="dream",
             name="dream",

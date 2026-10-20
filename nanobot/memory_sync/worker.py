@@ -21,6 +21,7 @@ class HindsightWorker:
     def __init__(
         self, outbox: MemoryOutbox, *, api_url: str, bank_id: str,
         client: httpx.AsyncClient | None = None,
+        hold_path: Path | None = None,
     ):
         parts = urlsplit(api_url)
         if (parts.scheme != "http" or parts.hostname not in {"127.0.0.1", "::1", "localhost"}
@@ -31,6 +32,7 @@ class HindsightWorker:
         self.api_url = api_url.rstrip("/")
         self.prefix = f"/v1/default/banks/{quote(bank_id, safe='')}"
         self.client = client
+        self.hold_path = hold_path
         self.lock_path = outbox.path.with_suffix(".delivery.lock")
 
     @staticmethod
@@ -40,6 +42,8 @@ class HindsightWorker:
     async def run_once(self) -> str:
         """One serialized delivery/poll. Never acknowledge HTTP acceptance as completion."""
         with FileLock(self.lock_path, timeout=0):
+            if self.hold_path is not None and self.hold_path.exists():
+                return "paused"
             job = self.outbox.next_job()
             if job is None:
                 return "idle"
@@ -78,6 +82,8 @@ class HindsightWorker:
                         "timeout", "temporarily unavailable", "503", "502",
                     ))
                     if transient:
+                        if self.hold_path is not None and self.hold_path.exists():
+                            return "paused"
                         retried = await client.post(operation_path + "/retry")
                         retried.raise_for_status()
                         self.outbox.record(job.document_id, "submitted", delay=delay,
@@ -86,6 +92,8 @@ class HindsightWorker:
                     self.outbox.record(job.document_id, "needs_attention", error_code="remote_failed")
                     return "attention"
                 if state == "not_found":
+                    if self.hold_path is not None and self.hold_path.exists():
+                        return "paused"
                     response = await client.post(
                         self.api_url + self.prefix + "/memories", json=json.loads(job.payload),
                     )

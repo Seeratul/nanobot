@@ -154,6 +154,7 @@ class MemoryOutbox:
                 )
                 payload = json.dumps({"items": [{
                     "content": content, "document_id": document_id, "update_mode": "replace",
+                    "timestamp": "unset",
                     "context": context,
                     "metadata": {"source_framework": "nanobot", "session_id": conversation_id,
                                  "first_seq": str(start + 1), "last_seq": str(end)},

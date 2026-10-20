@@ -65,13 +65,14 @@ async def run_forget(forgetter: ForgetWorker, *, interval: float = 30) -> None:
 async def serve(
     outbox_path: Path, api_url: str, bank_id: str, workspace: Path, profile_state: Path,
     *, delivery_interval: float = 5, profile_interval: float = 300, pause_path: Path | None = None,
+    hold_path: Path | None = None,
 ) -> None:
     if delivery_interval <= 0 or profile_interval <= 0:
         raise ValueError("service intervals must be positive")
     if not profile_state.is_file():
         raise ValueError("profile seeding and baseline registration must finish before service start")
     worker = HindsightWorker(MemoryOutbox(outbox_path, bank_id=bank_id, pause_path=pause_path),
-                             api_url=api_url, bank_id=bank_id)
+                             api_url=api_url, bank_id=bank_id, hold_path=hold_path)
     exporter = ProfileExporter(worker, workspace, profile_state)
     async with asyncio.TaskGroup() as group:
         group.create_task(run_forget(ForgetWorker(worker, exporter, SystemdWorkerControl(worker.outbox.pause_path))))
@@ -89,12 +90,13 @@ def main() -> None:
     parser.add_argument("--workspace", required=True, type=Path)
     parser.add_argument("--profile-state", required=True, type=Path)
     parser.add_argument("--pause-file", type=Path)
+    parser.add_argument("--hold-file", type=Path)
     parser.add_argument("--delivery-interval", type=float, default=5)
     parser.add_argument("--profile-interval", type=float, default=300)
     args = parser.parse_args()
     asyncio.run(serve(args.outbox, args.api_url, args.bank_id, args.workspace, args.profile_state,
                       delivery_interval=args.delivery_interval, profile_interval=args.profile_interval,
-                      pause_path=args.pause_file))
+                      pause_path=args.pause_file, hold_path=args.hold_file))
 
 
 if __name__ == "__main__":

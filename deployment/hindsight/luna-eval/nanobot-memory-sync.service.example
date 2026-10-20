@@ -1,15 +1,24 @@
 [Unit]
 Description=Nanobot Hindsight outbox and saved profile projection
-After=network-online.target
+After=network-online.target hindsight-api.service
+Wants=hindsight-api.service
+ConditionPathExists=!/var/lib/hindsight/import-timeout.hold
 
 [Service]
-Type=simple
-EnvironmentFile=%h/.config/nanobot/memory-sync.env
-ExecStart=%h/.local/share/nanobot/venv/bin/python -m nanobot.memory_sync.service --outbox ${MEMORY_OUTBOX} --api-url ${MEMORY_API_URL} --bank-id ${MEMORY_BANK_ID} --workspace ${MEMORY_WORKSPACE} --profile-state ${MEMORY_PROFILE_STATE} --pause-file /var/lib/hindsight/control/forget-pending
+Type=exec
+User=nanobot
+Group=nanobot
+WorkingDirectory=/home/nanobot/.nanobot/workspace
+Environment=HOME=/home/nanobot
+Environment=PYTHONDONTWRITEBYTECODE=1
+EnvironmentFile=/home/nanobot/.config/nanobot/memory-sync.env
+ExecStart=/home/nanobot/.local/share/nanobot/venv/bin/python -m nanobot.memory_sync.service --outbox ${MEMORY_OUTBOX} --api-url ${MEMORY_API_URL} --bank-id ${MEMORY_BANK_ID} --workspace ${MEMORY_WORKSPACE} --profile-state ${MEMORY_PROFILE_STATE} --pause-file ${MEMORY_PAUSE_FILE} --hold-file ${MEMORY_HOLD_FILE}
 Restart=on-failure
 RestartSec=30
 UMask=0077
 NoNewPrivileges=true
+StandardOutput=journal
+StandardError=null
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

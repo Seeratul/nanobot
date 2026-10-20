@@ -448,8 +448,17 @@ async def cmd_model(ctx: CommandContext) -> OutboundMessage:
     )
 
 
+def _hindsight_dream_disabled(ctx: CommandContext) -> OutboundMessage:
+    return OutboundMessage(
+        channel=ctx.msg.channel, chat_id=ctx.msg.chat_id,
+        content="Hindsight manages memory and profiles. Dream is disabled.",
+    )
+
+
 async def cmd_dream(ctx: CommandContext) -> OutboundMessage:
     """Manually trigger a Dream consolidation run."""
+    if getattr(ctx.loop, "hindsight_config", None) is not None and ctx.loop.hindsight_config.enabled:
+        return _hindsight_dream_disabled(ctx)
     import time
 
     loop = ctx.loop
@@ -530,6 +539,8 @@ async def cmd_dream(ctx: CommandContext) -> OutboundMessage:
 
 async def cmd_dream_prompt(ctx: CommandContext) -> OutboundMessage:
     """Show or set up the workspace Dream memory instructions."""
+    if getattr(ctx.loop, "hindsight_config", None) is not None and ctx.loop.hindsight_config.enabled:
+        return _hindsight_dream_disabled(ctx)
     store = ctx.loop.context.memory
     path = store.dream_prompt_file
     display_path = path.relative_to(store.workspace).as_posix()
@@ -725,6 +736,8 @@ async def cmd_dream_log(ctx: CommandContext) -> OutboundMessage:
     Default: diff of the latest Dream commit versus its parent.
     With /dream-log <sha>: diff of that specific commit.
     """
+    if getattr(ctx.loop, "hindsight_config", None) is not None and ctx.loop.hindsight_config.enabled:
+        return _hindsight_dream_disabled(ctx)
     store = ctx.loop.consolidator.store
     git = store.git
 
@@ -789,6 +802,8 @@ async def cmd_dream_restore(ctx: CommandContext) -> OutboundMessage:
         /dream-restore          — list recent commits
         /dream-restore <sha>    — revert a specific commit
     """
+    if getattr(ctx.loop, "hindsight_config", None) is not None and ctx.loop.hindsight_config.enabled:
+        return _hindsight_dream_disabled(ctx)
     store = ctx.loop.consolidator.store
     git = store.git
     if not git.is_initialized():
