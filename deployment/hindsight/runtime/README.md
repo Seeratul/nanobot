@@ -737,3 +737,49 @@ not four per task. Remote embeddings retain batch8/max-concurrency1, and full
 ANN plus the 120-second timeout stop remain unchanged. Native recovery resumes
 unfinished tasks; uncommitted streaming work can enter the delta/checkpoint path
 and its next durable write need not happen immediately after restart.
+
+## Full ANN planner fix, validated and activated 2026-10-20
+
+The failed 910-vector delta input was reconstructed from operation-scoped cached
+extraction and embeddings, with provider fallback forbidden and a matching full
+embedding-plan/order fingerprint: 855 world and 55 experience vectors. Actual
+native top_k is 50, not the 20 used in the earlier representative EXPLAIN. Tests
+kept ef_search60, iterative_scanoff, threshold and ALL vectors unchanged.
+
+With workers stopped, the original query timed out at120.076s and again at
+120.015s after warming caches. Its world plan repeatedly scans/sorts approximately
+6609 candidates per seed. A transaction-local enable_sortoff preference selects
+HNSW for both native fact-type queries: complete probe28.794s, actual patched
+wrapper7.271s with warm caches. Their returned link sets AND scores match.
+
+ann_timeout_stop now opens a transaction/savepoint around the complete native
+call, reads the prior enable_sort value, sets only that local planner preference,
+then explicitly restores it on success (including inside caller transactions).
+Failure/cancellation rolls back the scope. The original full arrays are passed
+once. No search breadth, threshold, top-k or embedding settings are reduced.
+The existing120s deadline covers setup, queries and restoration; durable timeout
+stop/claim/retry protections remain. It does not change global PostgreSQL config.
+
+HNSW is approximate: against a full exact cosine reference, returned links cover
+26474/26537 exact links (99.7626%); 63 exact-reference links are absent and 47/910
+seeds have a differing set. This is measured nearest-neighbour link recall, not
+semantic/factual accuracy. Source facts are not dropped by this comparison.
+It must not be described as identical to an exhaustive scan. Scores agree with
+the reference within6.23e-7. See ann-plan-fix-report.json for numeric evidence.
+
+23 focused timeout/checkpoint/usage tests passed, including deadline coverage of
+planner setup, preservation of initially enabled/disabled sort, rollback on
+errors and no retry under hold. The guarded install_ann_plan_fix.py requires
+stopped workers, matching real timeout evidence, pinned native1.0.0 and a passing
+full patched replay. It installs source but preserves the hold and starts no
+services. After review, timeout evidence was preserved privately under usage,
+the reviewed hold cleared and workers/importer resumed at10:23:41UTC. Existing
+2x4 slots/four Luna calls each remain. Original recovery operation is retained.
+Main Nanobot package/config/profiles remain untouched; full cutover is pending.
+
+Diagnostics are maintenance-only, not alternate production embedding or ANN
+implementations. Raw diagnostic vectors/links remain private; public reports
+contain aggregate data only. No model requests or persistent memory writes
+occurred during query diagnostics. Access after the user reboot used the Pi's
+resolved IPv6 address with its existing IPv4 HostKeyAlias and strict key checking;
+no SSH trust checks or network configuration were weakened.

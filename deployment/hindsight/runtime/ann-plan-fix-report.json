@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-20",
+  "runtime": "hindsight-api-slim 1.0.0",
+  "failed_input_reconstructed_from_cache": true,
+  "embedding_plan_and_order_verified": true,
+  "vectors": 910,
+  "fact_types": {"world": 855, "experience": 55},
+  "top_k": 50,
+  "ef_search": 60,
+  "iterative_scan": "off",
+  "threshold_changed": false,
+  "seed_batching_added": false,
+  "workers_stopped_during_comparison": true,
+  "native_runs": [
+    {"result": "TimeoutError", "seconds": 120.076},
+    {"result": "TimeoutError", "seconds": 120.015, "warm_cache_control": true}
+  ],
+  "index_preference_probe": {"result": "success", "seconds": 28.794, "links": 26521},
+  "patched_wrapper": {
+    "result": "success",
+    "seconds": 7.271,
+    "warm_cache": true,
+    "links": 26521,
+    "matches_index_probe_link_set_and_scores": true,
+    "previous_planner_setting_restored": true
+  },
+  "planner_change": "SET LOCAL enable_sort=off only during full ANN call",
+  "production_limit_seconds": 120,
+  "exact_reference_check": {
+    "exact_links": 26537,
+    "ann_links": 26521,
+    "exact_links_found": 26474,
+    "missing_exact_links": 63,
+    "seeds_with_identical_exact_link_set": 863,
+    "exact_link_recall": 0.9976259562120813,
+    "max_cosine_score_difference": 0.0000006222554780332956,
+    "not_a_semantic_accuracy_measure": true
+  },
+  "tests_passed": 23,
+  "diagnostic_model_calls": 0,
+  "diagnostic_persistent_memory_writes": 0,
+  "caveat": "HNSW remains approximate. Unchanged search settings do not imply identical results to exhaustive scans."
+}

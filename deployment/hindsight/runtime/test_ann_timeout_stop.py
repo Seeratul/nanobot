@@ -2,6 +2,7 @@ import asyncio
 import json
 import tempfile
 import unittest
+from contextlib import asynccontextmanager
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -14,6 +15,31 @@ class TimeoutStopTests(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(self.directory.cleanup)
         self.path = Path(self.directory.name) / 'hold'
         self.calls = []
+
+    def connection(self, setting='on'):
+        class Connection:
+            sort = setting
+
+            @asynccontextmanager
+            async def transaction(self):
+                previous = self.sort
+                try:
+                    yield
+                except BaseException:
+                    self.sort = previous
+                    raise
+
+            async def fetchval(self, statement):
+                if statement != 'SHOW enable_sort':
+                    raise AssertionError('unexpected planner query')
+                return self.sort
+
+            async def execute(self, statement):
+                if statement not in {'SET LOCAL enable_sort=on', 'SET LOCAL enable_sort=off'}:
+                    raise AssertionError('unexpected planner mutation')
+                self.sort = statement.rsplit('=', 1)[1]
+
+        return Connection()
 
     def poller(self):
         calls = self.calls
@@ -37,6 +63,7 @@ class TimeoutStopTests(unittest.IsolatedAsyncioTestCase):
         result = object()
 
         async def native(conn, bank_id, unit_ids, embeddings, fact_types=None, *, threshold):
+            self.assertEqual(conn.sort, 'off')
             self.assertIs(unit_ids, ids)
             self.assertIs(embeddings, vectors)
             self.assertEqual(threshold, 0.83)
@@ -45,7 +72,10 @@ class TimeoutStopTests(unittest.IsolatedAsyncioTestCase):
 
         links = SimpleNamespace(compute_semantic_links_ann=native)
         install('felix-pi', path=self.path, links=links, poller=self.poller())
-        actual = await links.compute_semantic_links_ann(None, 'synthetic', ids, vectors, threshold=0.83)
+        connection = self.connection()
+        actual = await links.compute_semantic_links_ann(connection, 'synthetic', ids, vectors,
+                                                       threshold=0.83)
+        self.assertEqual(connection.sort, 'on')
         self.assertIs(actual, result)
         self.assertEqual(self.calls, ['ann'])
         self.assertFalse(self.path.exists())
@@ -58,7 +88,9 @@ class TimeoutStopTests(unittest.IsolatedAsyncioTestCase):
         poller = self.poller()
         install('felix-pi', path=self.path, limit=0.01, links=links, poller=poller)
         with self.assertRaises(TimeoutError):
-            await links.compute_semantic_links_ann(None, 'synthetic', ['a'], [[1]], threshold=0.5)
+            connection = self.connection()
+            await links.compute_semantic_links_ann(connection, 'synthetic', ['a'], [[1]], threshold=0.5)
+        self.assertEqual(connection.sort, 'on')
         event = json.loads(self.path.read_text())
         self.assertEqual(event['phase'], 'ann_timeout')
         self.assertEqual(event['seeds'], 1)
@@ -76,7 +108,9 @@ class TimeoutStopTests(unittest.IsolatedAsyncioTestCase):
         poller = self.poller()
         install('felix-pi-2', path=self.path, links=links, poller=poller)
         with self.assertRaises(ValueError):
-            await links.compute_semantic_links_ann(None, 'synthetic', [], [], threshold=0.5)
+            connection = self.connection()
+            await links.compute_semantic_links_ann(connection, 'synthetic', [], [], threshold=0.5)
+        self.assertEqual(connection.sort, 'on')
         await poller()._schedule_retry('synthetic', 0, 'unavailable', None)
         self.assertFalse(self.path.exists())
         self.assertEqual(self.calls, ['retry'])
@@ -100,6 +134,30 @@ class TimeoutStopTests(unittest.IsolatedAsyncioTestCase):
         wrapped = RuntimeError('synthetic')
         wrapped.__cause__ = TimeoutError()
         self.assertTrue(is_timeout(wrapped))
+
+    async def test_existing_disabled_sort_is_preserved(self):
+        async def native(conn, bank_id, unit_ids, embeddings, fact_types=None, *, threshold):
+            self.assertEqual(conn.sort, 'off')
+            return []
+        links = SimpleNamespace(compute_semantic_links_ann=native)
+        install('felix-pi', path=self.path, links=links, poller=self.poller())
+        connection = self.connection('off')
+        await links.compute_semantic_links_ann(connection, 'synthetic', [], [], threshold=0.5)
+        self.assertEqual(connection.sort, 'off')
+
+    async def test_deadline_also_covers_planner_setup(self):
+        async def native(conn, bank_id, unit_ids, embeddings, fact_types=None, *, threshold):
+            raise AssertionError('must time out before native call')
+        links = SimpleNamespace(compute_semantic_links_ann=native)
+        install('felix-pi', path=self.path, limit=0.01, links=links, poller=self.poller())
+        connection = self.connection()
+        async def slow_setting(statement):
+            await asyncio.sleep(1)
+            return 'on'
+        connection.fetchval = slow_setting
+        with self.assertRaises(TimeoutError):
+            await links.compute_semantic_links_ann(connection, 'synthetic', ['a'], [[1]], threshold=0.5)
+        self.assertTrue(self.path.exists())
 
 
 if __name__ == '__main__':

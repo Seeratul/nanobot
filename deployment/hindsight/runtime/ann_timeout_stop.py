@@ -53,7 +53,7 @@ def install(worker, *, path=HOLD, limit=LIMIT, links=None, poller=None):
     if getattr(original, '_import_timeout_stop', False):
         return
     signature = inspect.signature(original)
-    if not {'unit_ids', 'embeddings', 'fact_types'} <= set(signature.parameters):
+    if not {'conn', 'unit_ids', 'embeddings', 'fact_types'} <= set(signature.parameters):
         raise RuntimeError('unsupported native ANN interface')
 
     @functools.wraps(original)
@@ -64,8 +64,18 @@ def install(worker, *, path=HOLD, limit=LIMIT, links=None, poller=None):
         try:
             # One call with the COMPLETE original arrays: no slicing, reduced
             # top-k, changed threshold, dropped seeds or substitute search.
-            async with asyncio.timeout(limit):
-                return await original(*args, **kwargs)
+            connection = bound.arguments['conn']
+            async with asyncio.timeout(limit), connection.transaction():
+                previous_sort = await connection.fetchval('SHOW enable_sort')
+                if previous_sort not in {'on', 'off'}:
+                    raise RuntimeError('unexpected ANN planner setting')
+                # The native query otherwise chooses a scan+sort for every seed.
+                # Keep all ANN search settings; scope the planner preference to
+                # this call and restore it even inside a caller transaction.
+                await connection.execute('SET LOCAL enable_sort=off')
+                result = await original(*args, **kwargs)
+                await connection.execute('SET LOCAL enable_sort=' + previous_sort)
+                return result
         except Exception as error:
             if is_timeout(error):
                 signal_timeout(worker, 'ann_timeout', path=path,
